@@ -7,7 +7,72 @@
 - 时长 = 数值 + 单位（秒 / 分 / 时），可动态修改；
 - UI 使用 MIUIX 风格（纯因为好看，非小米专属）。
 
-> 当前进度：工具链已调通，Debug / Release 均可编译。功能代码（Xposed 骨架、检测链路、息屏执行）尚未开始。
+> 当前进度：**功能代码已完成并编译通过**，等待真机验证。首次启用默认是「安全模式」，只写日志不真正息屏。
+
+---
+
+## 二、工作原理
+
+```
+┌──────────────── 目标 App 进程（抖音 / 快手 / 红果短剧）────────────────┐
+│  hook Activity.dispatchTouchEvent / dispatchKeyEvent  →  记录最后操作时间 │
+│  hook Activity.onResume / onPause                    →  判断前台 / 重新计时│
+│  每 5 秒检查一次：前台 && 无操作时长 ≥ 设定值  →  发送广播                │
+└──────────────────────────────┬──────────────────────────────────────┘
+                               │ 广播 ACTION_SCREEN_OFF（带令牌）
+┌──────────────────────────────▼──────────────────────────────────────┐
+│  system_server 进程                                                   │
+│  动态注册广播接收器 → 反射调用 PowerManager.goToSleep(@hide)          │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+为什么必须分两段：普通 App 没有 `DEVICE_POWER` 权限，调不了 `goToSleep`；而视频类 App 是靠 WakeLock / 屏幕常亮标志保持亮屏的，**改系统休眠时间对它们无效**，必须由系统进程强制执行。
+
+为什么不用管「是否在播放视频」：判定只看**有没有触摸或按键操作**，不在乎播放状态，这正是需求。
+
+跨进程配置：UI 写入 libxposed 的 remote preferences，框架负责同步到各个被 hook 的进程，所以**改完设置立刻生效，不需要重启应用**。
+
+---
+
+## 三、使用步骤
+
+1. 在 LSPosed 里启用本模块。
+2. 作用域里**务必勾选「系统框架」**，再勾选抖音 / 快手 / 红果短剧等要生效的应用。
+3. 重启（或强行停止）这些应用，让模块注入进去。
+4. 打开本 App，**先打开首页顶部的「① 启用系统框架息屏」**（默认关闭，见下方安全设计）。
+   注意：这不是 LSPosed 里的一个应用，是本 App 里的开关。打开后 system_server 会在 30 秒内完成注册，不需要重启。
+5. 点首页的「② 立即测试息屏」—— 它会自己检查屏幕有没有真的灭掉，没灭会直接告诉你该查什么。
+5. 再设置时长：
+   - **全局默认时长**：数值 + 单位（秒 / 分钟 / 小时），默认 30 分钟。
+   - **应用单独设置**：每个已勾选的应用可单独设为「跟随全局 / 单独设置 / 该应用不生效」。
+6. 确认息屏可用后，回到全局设置**关掉「安全模式」**，功能才真正生效。
+
+### 安全设计
+
+hook `system_server` 的风险在于：里面**任何一个线程抛出未捕获异常，`RuntimeInit` 的默认处理器都会 `System.exit()`，整机立刻重启**。所以这里有五条铁律：
+
+1. **绝不调用 `ActivityThread.systemMain()`**。它会 new 一个 ActivityThread 并覆盖 `sCurrentActivityThread`，把系统自己那个架空 —— 这是卡开机的头号凶手。拿不到 ActivityThread 就返回 false 等下一轮重试。
+2. **先等开机完成**（轮询 `sys.boot_completed` / `dev.bootcomplete`，最多 5 分钟），再缓冲 20 秒，然后才做任何事。开机阶段的 AMS / PMS 没就绪，抢跑必死或撞 Watchdog。
+3. **我们自己开的每个线程都装 `UncaughtExceptionHandler`**，并且线程体再包一层 try/catch。
+4. **`onReceive` 跑在 system_server 主线程，绝不做 IPC**。令牌等跨进程数据一律后台预热、缓存到 volatile 字段；真正的息屏丢到工作线程。
+5. **默认不注册**。`system_enabled` 默认 `false`，新装版本一定不会卡开机，用户明确打开开关后才 hook 系统框架。
+
+另外：`goToSleep` 在历代 Android 上签名不同（1 参数 / 3 参数），按参数个数探测；广播带令牌校验；息屏有最小 3 秒间隔限流。
+
+### 万一开机卡住（无限重启）
+
+1. **开机时连续按音量键**，触发 Magisk / KernelSU / APatch 的安全模式，会停用所有模块；进去后到 LSPosed 取消勾选本模块。
+2. 或进 TWRP / OrangeFox 等 Recovery，**删掉 `/data/adb/lspd/config`** 目录 —— 这会停用全部 Xposed 模块。
+3. 或删掉 `/data/adb/modules` 下的 lsposed 模块目录，或刷官方卸载包。
+4. 有 root shell 时：`setprop persist.sys.autoscreenoff.disable 1`（模块会自行跳过注册）。
+
+恢复后请关掉「系统框架息屏」，并把 `adb logcat -s AutoScreenOff` 的报错发出来。
+
+### 排查
+
+日志用 logcat 过滤标签 `AutoScreenOff` 查看。打开「详细日志」后，每 5 秒会打印一次 `已 Xs / Ys` 的倒计时。
+
+不生效时按顺序检查：模块是否启用 → 作用域是否含「系统框架」 → 目标 App 是否已重启 → 安全模式是否已关闭。
 
 ---
 
@@ -263,20 +328,37 @@ code/
 
 ---
 
-## 八、开发路线（后续）
+## 九、代码结构
 
-1. ✅ 工具链调通，Debug / Release 编译通过
-2. ⬜ Xposed 骨架：`META-INF/xposed/{java_init.list, scope.list, module.prop}` + `android:label` / `android:description`，只打日志，验证能同时注入「系统框架」与目标 App
-3. ⬜ 无操作检测：hook `Activity.dispatchTouchEvent` 记录最后触摸 + 生命周期判前台 + 定时器
-4. ⬜ 息屏执行：system_server 侧反射 `PowerManager.goToSleep`（多签名按 SDK 分支探测），默认关闭、只打日志
-5. ⬜ 配置通道与 UI：全局默认 + 单应用覆盖，时长数值 + 单位
-6. ⬜ 自检页：显示框架名称/版本、API 版本、`PROP_CAP_SYSTEM`、当前 ROM 息屏是否可用
-7. ⬜ 真机验证后打开真正的息屏开关
+```
+app/src/main/
+├── resources/META-INF/xposed/
+│   ├── java_init.list     # 模块入口类名
+│   ├── scope.list         # 推荐作用域（含 system）
+│   └── module.prop        # minApiVersion=102
+└── java/me/frk2222/autoscreenoffcode/
+    ├── MainActivity.kt
+    ├── xposed/
+    │   ├── HookEntry.kt         # 入口：区分 system_server / 普通 App
+    │   ├── AppMonitor.kt        # 目标 App 侧：记录操作、计时、发广播
+    │   ├── ScreenOffService.kt  # system_server 侧：收广播、反射 goToSleep
+    │   └── Config.kt            # 配置键与解析（三处共用）
+    ├── data/
+    │   ├── Framework.kt         # 框架服务绑定与能力位
+    │   └── ConfigStore.kt       # UI 侧读写 remote prefs
+    └── ui/
+        ├── AppRoot.kt           # 导航 + 首页 + 使用说明
+        ├── SettingsScreen.kt    # 全局设置
+        └── AppsScreen.kt        # 应用列表 / 单应用设置 / 添加应用
+```
 
-### 安全约定
+## 十、后续计划
 
-因为要在 `system_server` 里执行代码，一旦出错会导致系统反复重启，所以：
-
-- 所有 hook 代码必须 try/catch 全覆盖；
-- 必须检查 `PROP_CAP_SYSTEM` 能力位；
-- 首次启用默认「只记日志、不执行息屏」，真机验证通过后再打开。
+- [x] 工具链调通，Debug / Release 编译通过
+- [x] Xposed 骨架与元数据
+- [x] 无操作检测链路
+- [x] system_server 侧息屏执行（多签名探测 + 重试 + 能力位检查）
+- [x] 配置通道与 MIUIX 界面（全局 + 单应用）
+- [ ] 真机验证：HyperOS 3 / ColorOS 16 / Flyme 9
+- [ ] 自检页增强（显示各 ROM 上 goToSleep 是否真的可用）
+- [ ] 可选：息屏同时暂停播放（hook MediaSession / AudioManager）

@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">autoScreenOffCode</string>
+    <string name="app_name">无操作息屏</string>
+    <string name="module_description">按「无操作时长」强制息屏，不看是否在播放视频。支持全局默认时长与单个应用单独设置。</string>
 </resources>
