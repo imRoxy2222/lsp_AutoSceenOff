@@ -24,12 +24,9 @@ import me.frk2222.autoscreenoffcode.data.ConfigStore
 import me.frk2222.autoscreenoffcode.data.Framework
 import me.frk2222.autoscreenoffcode.data.LauncherIcon
 import me.frk2222.autoscreenoffcode.xposed.Config
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
@@ -151,7 +148,7 @@ fun ConfigScreen(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Config.TimeUnit.entries.forEachIndexed { index, unit ->
-                            PresetChip(
+                            ChipButton(
                                 text = unit.label,
                                 selected = unitIndex == index,
                                 enabled = activated,
@@ -254,24 +251,5 @@ fun ConfigScreen(
         if (iconNotice != null) {
             item { NoticeCard(notice = iconNotice!!) }
         }
-    }
-}
-
-/** 时长预设按钮。选中的那个用主色填充，其余保持灰底，一眼看出当前是哪个 */
-@Composable
-private fun PresetChip(
-    text: String,
-    selected: Boolean,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier,
-        colors = if (selected) ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors(),
-    ) {
-        Text(text = text)
     }
 }

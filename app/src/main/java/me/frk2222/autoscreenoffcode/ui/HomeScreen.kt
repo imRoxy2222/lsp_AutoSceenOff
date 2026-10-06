@@ -5,22 +5,9 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,13 +19,7 @@ import me.frk2222.autoscreenoffcode.data.ConfigStore
 import me.frk2222.autoscreenoffcode.data.Framework
 import me.frk2222.autoscreenoffcode.data.FrameworkInfo
 import me.frk2222.autoscreenoffcode.xposed.Config
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
@@ -152,7 +133,7 @@ fun HomeScreen(
                                 )
                             }
                         },
-                        title = "① 启用息屏功能(必开)",
+                        title = "启用息屏功能(必开)",
                         summary = "息屏必须由系统进程执行，不开这个所有请求都没人处理",
                         enabled = activated,
                     )
@@ -170,7 +151,7 @@ fun HomeScreen(
                                 Notice("写入失败：模块未激活", NoticeTone.ERROR)
                             }
                         },
-                        title = "② 安全模式（DEBUG）",
+                        title = "安全模式（DEBUG）",
                         summary = "仅限DEBUG开启,平时需关闭",
                         enabled = activated,
                     )
@@ -199,19 +180,6 @@ fun HomeScreen(
 
         if (notice != null) {
             item { NoticeCard(notice = notice!!) }
-        }
-
-        // ---- 其余设置都在「配置」标签 ----
-        item { SmallTitle(text = "更多设置") }
-
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                ArrowPreference(
-                    title = "调时长 · 加应用",
-                    summary = "全局默认时长、单个应用单独设置",
-                    onClick = onGoConfig,
-                )
-            }
         }
     }
 }
@@ -415,7 +383,7 @@ private fun testScreenOff(context: Context, onResult: (Notice) -> Unit) {
         } else {
             onResult(
                 Notice(
-                    "息屏成功。现在可以在首页关掉「② 安全模式」，功能就正式启用了。",
+                    "息屏成功。现在可以在首页关掉「安全模式」",
                     NoticeTone.OK,
                 )
             )

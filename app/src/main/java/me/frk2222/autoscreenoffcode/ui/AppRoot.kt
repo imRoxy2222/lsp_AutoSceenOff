@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -36,6 +37,8 @@ import top.yukonga.miuix.kmp.icon.extended.Settings
 fun AppRoot() {
     val context = LocalContext.current
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    // 「添加应用」页的筛选条件放在外壳里：改它的按钮在顶栏右上角，不在那个页面内部
+    var appFilter by rememberSaveable { mutableStateOf(AppFilter.USER) }
 
     val homeStack = remember { mutableStateListOf<Route>(Route.Home) }
     val configStack = remember { mutableStateListOf<Route>(Route.Config) }
@@ -60,6 +63,14 @@ fun AppRoot() {
                                 contentDescription = "返回",
                             )
                         }
+                    }
+                },
+                actions = {
+                    if (route == Route.AddApp) {
+                        AppFilterMenu(
+                            filter = appFilter,
+                            onFilterChange = { appFilter = it },
+                        )
                     }
                 },
             )
@@ -107,7 +118,11 @@ fun AppRoot() {
                 onRemoved = { stack.removeAt(stack.lastIndex) },
             )
 
-            Route.AddApp -> AddAppScreen(padding = padding)
+            Route.AddApp -> AddAppScreen(
+                padding = padding,
+                filter = appFilter,
+                onFilterChange = { appFilter = it },
+            )
         }
     }
 }

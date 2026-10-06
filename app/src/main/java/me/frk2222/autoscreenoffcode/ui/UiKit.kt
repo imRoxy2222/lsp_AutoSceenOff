@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.frk2222.autoscreenoffcode.ui.theme.AppSemantic
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -181,6 +183,30 @@ internal fun NoticeCard(
                 color = MiuixTheme.colorScheme.onSurface,
             )
         }
+    }
+}
+
+/**
+ * 一排里用的小胶囊按钮：选中的那个主色填充，其余灰底，一眼看出当前是哪个。
+ *
+ * 一行最多放 4 个（MIUIX 的 Button 有 58dp 最小宽度，再挤就压字了），
+ * 超出就换行或改成二级页面。外面用 `Modifier.weight(1f)` 平分宽度。
+ */
+@Composable
+internal fun ChipButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        colors = if (selected) ButtonDefaults.buttonColorsPrimary() else ButtonDefaults.buttonColors(),
+    ) {
+        Text(text = text)
     }
 }
 
