@@ -18,12 +18,37 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.AutoScreenOffCode"
             android:windowSoftInputMode="adjustResize">
+            <!--
+              注意：这里刻意【不】配 LAUNCHER。桌面入口由下面的 activity-alias 提供，
+              这样「隐藏桌面图标」只要禁用那个 alias 就行，而这个 Activity 本身始终可用。
+
+              de.robv.android.xposed.category.MODULE_SETTINGS 是 Xposed 生态的惯例 category：
+              LSPosed 的「启动」菜单会优先查它并用 setClassName 显式启动，
+              与有没有桌面图标无关 —— 所以隐藏图标后依然能从 LSPosed 打开本模块。
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
+            </intent-filter>
+        </activity>
+
+        <!-- 桌面图标。隐藏图标 = 把这个 alias 置为 DISABLED -->
+        <activity-alias
+            android:name=".LauncherAlias"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".MainActivity"
+            android:theme="@style/Theme.AutoScreenOffCode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
     </application>
 
 </manifest>

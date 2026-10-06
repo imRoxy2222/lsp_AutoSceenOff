@@ -68,6 +68,26 @@ hook `system_server` 的风险在于：里面**任何一个线程抛出未捕获
 
 恢复后请关掉「系统框架息屏」，并把 `adb logcat -s AutoScreenOff` 的报错发出来。
 
+### 隐藏桌面图标
+
+在「全局设置 → 界面 → 隐藏桌面图标」里开关。
+
+**原理**：桌面入口不是 `MainActivity` 本身，而是 manifest 里的 `activity-alias`（`.LauncherAlias`）。把它置为 `DISABLED`，桌面就查不到带 `LAUNCHER` 的组件，图标消失。
+
+**隐藏后怎么打开**：`MainActivity` 声明了 Xposed 生态惯例的 category `de.robv.android.xposed.category.MODULE_SETTINGS`。LSPosed 的「启动」菜单**优先**查这个 category 并用 `setClassName` 显式启动（`AppHelper.getSettingsIntent`），跟有没有桌面图标无关。所以：
+
+> LSPosed → 模块 → **长按**本模块 → 「启动」
+
+**万一真进不来**（图标没了又找不到入口），用电脑执行：
+
+```bash
+adb shell pm enable me.frk2222.autoscreenoffcode/.LauncherAlias
+```
+
+或在 LSPosed 里取消启用本模块再重新启用。
+
+注意：切换后桌面图标可能要等桌面刷新或重启桌面才生效，属正常现象。升级安装时入口从 Activity 换到了 alias，桌面图标位置可能变动。
+
 ### 排查
 
 日志用 logcat 过滤标签 `AutoScreenOff` 查看。打开「详细日志」后，每 5 秒会打印一次 `已 Xs / Ys` 的倒计时。

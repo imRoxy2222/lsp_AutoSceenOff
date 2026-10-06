@@ -16,9 +16,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import me.frk2222.autoscreenoffcode.data.ConfigStore
 import me.frk2222.autoscreenoffcode.data.Framework
+import me.frk2222.autoscreenoffcode.data.LauncherIcon
 import me.frk2222.autoscreenoffcode.xposed.Config
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -29,8 +31,12 @@ import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 @Composable
 fun SettingsScreen(padding: PaddingValues) {
+    val context = LocalContext.current
     val activated = Framework.activated
     val rev = ConfigStore.revision
+
+    var hidden by remember { mutableStateOf(LauncherIcon.isHidden(context)) }
+    var hiddenHint by remember { mutableStateOf<String?>(null) }
 
     var enabled by remember(rev) { mutableStateOf(ConfigStore.bool(Config.KEY_ENABLED, true)) }
     var systemEnabled by remember(rev) {
@@ -150,6 +156,51 @@ fun SettingsScreen(padding: PaddingValues) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Text("全局默认：${valueText.ifEmpty { "-" }} ${Config.TimeUnit.entries[unitIndex].label}")
                 Text("这里设置的是默认值。被勾选的应用默认都用它，也可以在「应用设置」里给单个应用单独设置。")
+            }
+        }
+
+        item { SmallTitle(text = "界面") }
+
+        item {
+            SwitchPreference(
+                checked = hidden,
+                onCheckedChange = { next ->
+                    if (LauncherIcon.setHidden(context, next)) {
+                        hidden = next
+                        hiddenHint = if (next) {
+                            "桌面图标已隐藏。以后这样打开：LSPosed → 模块 → 长按本模块 →「启动」。" +
+                                "（图标可能要等桌面刷新或重启桌面后才消失，属正常现象）"
+                        } else {
+                            "桌面图标已恢复显示。"
+                        }
+                    } else {
+                        hiddenHint = "设置失败，请重试。"
+                    }
+                },
+                title = "隐藏桌面图标",
+                summary = if (hidden) {
+                    "已隐藏：桌面看不到本 App，从 LSPosed 长按本模块 →「启动」打开"
+                } else {
+                    "开启后桌面不再显示本 App，只能从 LSPosed 打开"
+                },
+            )
+        }
+
+        if (hiddenHint != null) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text(hiddenHint!!)
+                }
+            }
+        }
+
+        if (hidden) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Text("万一直进不来怎么办")
+                    Text("用电脑执行（把包名换成你自己的）：adb shell pm enable me.frk2222.autoscreenoffcode/.LauncherAlias")
+                    Text("或者在 LSPosed 里取消启用本模块再重新启用，图标也会回来。")
+                }
             }
         }
     }
