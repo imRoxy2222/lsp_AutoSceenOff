@@ -5,14 +5,23 @@ import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import me.frk2222.autoscreenoffcode.data.Framework
 import top.yukonga.miuix.kmp.basic.*
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /**
  * 向 LSPosed 申请扩充作用域。
@@ -49,70 +58,105 @@ fun AddAppScreen(padding: PaddingValues) {
         else allApps.filter { it.label.lowercase().contains(q) || it.pkg.lowercase().contains(q) }
     }
 
-    LazyColumn(
+    val listState = rememberLazyListState()
+    val uiScope = rememberCoroutineScope()
+    // 划过一屏左右才出现，刚点进来时不挡视线
+    val showBackToTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex >= 3 || listState.firstVisibleItemScrollOffset > 240
+        }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding),
-        contentPadding = screenPadding,
-        verticalArrangement = Arrangement.spacedBy(screenSpacing),
     ) {
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        onClick = {
-                            busy = true
-                            result = "已发起申请，请在 LSPosed 弹出的确认框中同意…"
-                            requestScope(context, selected.toList()) { msg ->
-                                busy = false
-                                result = msg
-                                selected = emptySet()
-                            }
-                        },
-                        enabled = selected.isNotEmpty() && !busy,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            if (selected.isEmpty()) "请先勾选应用"
-                            else "添加 ${selected.size} 个应用到作用域",
-                        )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = screenPadding,
+            verticalArrangement = Arrangement.spacedBy(screenSpacing),
+        ) {
+            item {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Button(
+                            onClick = {
+                                busy = true
+                                result = "已发起申请，请在 LSPosed 弹出的确认框中同意…"
+                                requestScope(context, selected.toList()) { msg ->
+                                    busy = false
+                                    result = msg
+                                    selected = emptySet()
+                                }
+                            },
+                            enabled = selected.isNotEmpty() && !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                if (selected.isEmpty()) "请先勾选应用"
+                                else "添加 ${selected.size} 个应用到作用域",
+                            )
+                        }
+                        if (result != null) Hint(result!!)
                     }
-                    if (result != null) Hint(result!!)
                 }
             }
-        }
 
-        item {
-            TextField(
-                value = query,
-                onValueChange = { query = it },
-                label = "搜索应用名或包名",
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        if (!loading) {
             item {
-                SmallTitle(text = if (visible.isEmpty()) "没有匹配的应用" else "已安装应用")
+                TextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    label = "搜索应用名或包名",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            if (!loading) {
+                item {
+                    SmallTitle(text = if (visible.isEmpty()) "没有匹配的应用" else "已安装应用")
+                }
+            }
+
+            items(visible, key = { it.pkg }) { app ->
+                val checked = app.pkg in selected
+                BasicComponent(
+                    title = app.label,
+                    summary = if (app.hasLauncher) app.pkg else "${app.pkg}（无桌面图标）",
+                    startAction = { AppIcon(pkg = app.pkg, label = app.label) },
+                    endActions = {
+                        Checkbox(
+                            state = if (checked) ToggleableState.On else ToggleableState.Off,
+                            onClick = null,
+                        )
+                    },
+                    onClick = {
+                        selected = if (checked) selected - app.pkg else selected + app.pkg
+                    },
+                )
             }
         }
 
-        items(visible, key = { it.pkg }) { app ->
-            val checked = app.pkg in selected
-            BasicComponent(
-                title = app.label,
-                summary = if (app.hasLauncher) app.pkg else "${app.pkg}（无桌面图标）",
-                startAction = { AppIcon(pkg = app.pkg, label = app.label) },
-                endActions = {
-                    Checkbox(
-                        state = if (checked) ToggleableState.On else ToggleableState.Off,
-                        onClick = null,
-                    )
-                },
-                onClick = {
-                    selected = if (checked) selected - app.pkg else selected + app.pkg
-                },
-            )
+        AnimatedVisibility(
+            visible = showBackToTop,
+            enter = fadeIn() + scaleIn(),
+            exit = fadeOut() + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp),
+        ) {
+            FloatingActionButton(
+                onClick = { uiScope.launch { listState.animateScrollToItem(0) } },
+                minWidth = 48.dp,
+                minHeight = 48.dp,
+            ) {
+                Icon(
+                    imageVector = rememberArrowUp(),
+                    contentDescription = "回到顶部",
+                    tint = MiuixTheme.colorScheme.onPrimary,
+                )
+            }
         }
     }
 }

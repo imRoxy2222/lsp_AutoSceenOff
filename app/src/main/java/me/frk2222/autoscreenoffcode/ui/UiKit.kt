@@ -14,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -118,3 +121,30 @@ internal fun isPackageInstalled(context: Context, pkg: String): Boolean = runCat
     context.packageManager.getApplicationInfo(pkg, 0)
     true
 }.getOrDefault(false)
+
+/**
+ * 「回到顶部」箭头。
+ *
+ * 自己画而不用 MIUIX 内置图标：它的 ExpandLess / Back 是出版社自绘路径，
+ * 方向要靠猜，转 90 度容易翻车；这一个从左上到右下怎么用都是朝上，行为确定。
+ */
+internal fun rememberArrowUp(): ImageVector = ImageVector.Builder(
+    name = "ArrowUp",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(
+        fill = SolidColor(Color(0xFF000000)),
+        fillAlpha = 1f,
+    ) {
+        moveTo(12f, 5.2f)
+        lineTo(20.4f, 13.6f)
+        lineTo(18.5f, 15.5f)
+        lineTo(12f, 9f)
+        lineTo(5.5f, 15.5f)
+        lineTo(3.6f, 13.6f)
+        close()
+    }
+}.build()
