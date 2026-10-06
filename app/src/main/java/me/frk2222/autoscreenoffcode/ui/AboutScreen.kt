@@ -80,19 +80,6 @@ fun AboutScreen(padding: PaddingValues) {
                 }
             }
         }
-
-        item { SmallTitle(text = "紧急自救") }
-
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Hint(
-                    "万一开机反复重启：" +
-                        "① 开机连续按音量键进入 Recovery 安全模式，再到 LSPosed 取消勾选本模块；" +
-                        "② 有 root shell 时执行 setprop persist.sys.autoscreenoff.disable 1，模块会自行跳过注册。" +
-                        "恢复后请把首页的「① 启用系统框架息屏」关掉，并把 adb logcat -s AutoScreenOff 的报错发出来。",
-                )
-            }
-        }
     }
 }
 

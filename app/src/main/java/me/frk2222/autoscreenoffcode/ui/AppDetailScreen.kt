@@ -165,7 +165,6 @@ fun AppDetailScreen(
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Hint("移出作用域后这个应用不再受本模块管理（也可以在 LSPosed 里取消勾选）")
                     Button(
                         onClick = {
                             removeScope(context, pkg) { msg ->

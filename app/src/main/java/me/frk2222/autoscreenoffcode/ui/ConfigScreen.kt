@@ -1,23 +1,10 @@
 package me.frk2222.autoscreenoffcode.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -27,13 +14,7 @@ import me.frk2222.autoscreenoffcode.data.ConfigStore
 import me.frk2222.autoscreenoffcode.data.Framework
 import me.frk2222.autoscreenoffcode.data.LauncherIcon
 import me.frk2222.autoscreenoffcode.xposed.Config
-import top.yukonga.miuix.kmp.basic.Button
-import top.yukonga.miuix.kmp.basic.ButtonDefaults
-import top.yukonga.miuix.kmp.basic.Card
-import top.yukonga.miuix.kmp.basic.HorizontalDivider
-import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextField
+import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
@@ -130,15 +111,16 @@ fun ConfigScreen(
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Hint("应用在前台且超过该时长没有任何触摸或按键就息屏，不看是否在播放视频")
                     TextField(
                         value = TextFieldValue(valueText),
                         onValueChange = { next ->
                             val filtered = next.text.filter { it.isDigit() }.take(4)
                             valueText = filtered
                             val parsed = filtered.toIntOrNull()
-                            if (parsed != null && parsed > 0) {
+                            if (parsed != null && parsed >= 30) {
                                 ConfigStore.put(Config.KEY_GLOBAL_VALUE, parsed)
+                            } else {
+                                ConfigStore.put(Config.KEY_GLOBAL_VALUE, 30) // 最低设置30s, 避免陷入循环
                             }
                         },
                         label = "数值",

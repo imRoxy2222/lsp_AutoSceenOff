@@ -148,7 +148,7 @@ fun HomeScreen(
                             }
                         },
                         title = "② 安全模式（DEBUG）",
-                        summary = if (dryRun) "当前只写日志。验证息屏可用后关掉它" else "已关闭：到时会真的息屏",
+                        summary = "仅限DEBUG开启,平时需关闭",
                         enabled = activated,
                     )
                 }
@@ -158,7 +158,7 @@ fun HomeScreen(
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Hint("会立刻关屏，用于验证链路是否可用，不受安全模式限制")
+                    Hint("验证链路是否可用，不受安全模式限制")
                     Button(
                         onClick = { testScreenOff(context) { resultText = it } },
                         enabled = activated,
@@ -335,7 +335,7 @@ private fun testScreenOff(context: Context, onResult: (String) -> Unit) {
             return
         }
 
-    onResult("已发送，2.5 秒后自检…")
+    onResult("已发送，1 秒后自检…")
 
     Handler(Looper.getMainLooper()).postDelayed({
         val pm = runCatching {
@@ -352,5 +352,5 @@ private fun testScreenOff(context: Context, onResult: (String) -> Unit) {
         } else {
             onResult("息屏成功。现在可以在首页关掉「② 安全模式」，功能就正式启用了。")
         }
-    }, 2500)
+    }, 1000)
 }
