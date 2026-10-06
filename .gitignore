@@ -1,0 +1,76 @@
+# ============================================================
+# autoScreenOff - Git 忽略规则
+#
+# 来源：Android Studio 官方模板 + 本项目实际产物
+# 注意 1：本文件不支持"行尾注释"，注释必须单独占一行
+# 注意 2：gradle/wrapper/gradle-wrapper.properties 与 gradlew(.bat)
+#         必须提交，否则别人 clone 后无法构建（这里没有忽略它们）
+# ============================================================
+
+# ---------- 构建产物 ----------
+# 所有模块的构建输出目录（含 app/build/）
+build/
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.externalNativeBuild/
+.cxx/
+baselineProfiles/
+
+# ---------- Gradle ----------
+.gradle/
+# Kotlin 守护进程的会话与缓存目录
+.kotlin/
+gradle-app.setting
+
+# ---------- 本机配置 ----------
+# 含 SDK 绝对路径，绝不提交
+local.properties
+
+# ---------- 签名密钥 ----------
+# 泄露 = 别人可以冒充你发布更新，绝不提交
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pk8
+*.x509.pem
+
+# ---------- IDE（Android Studio / IntelliJ）----------
+*.iml
+*.ipr
+*.iws
+.idea/*
+# 保留代码风格与运行配置，方便团队统一
+!.idea/codeStyles/
+!.idea/runConfigurations/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/deploymentTargetDropDown.xml
+.idea/appInsightsSettings.xml
+# 含本机 Gradle / SDK 路径
+.idea/gradle.xml
+.idea/misc.xml
+
+# ---------- 日志与临时文件 ----------
+*.log
+build.log
+release.log
+
+# ---------- 系统杂项 ----------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ---------- 调试 / 性能分析产物 ----------
+*.hprof
+*.heap
+.navigation/
