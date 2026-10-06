@@ -32,6 +32,15 @@ object AppSemantic {
     val darkWarn = Color(0xFFFFB951)
     val lightError = Color(0xFFE0443A)
     val darkError = Color(0xFFF97A70)
+
+    /**
+     * 「关于」页顶部那张大卡的流光底色，从深到浅三档。
+     *
+     * 最浅那一档也压在 #2E63D8 以内（白字对比度约 5.4:1）—— 卡上要放白色小字
+     * （版本号、说明），再浅就看不清了。改色时要守住这条。
+     */
+    val lightHero = listOf(Color(0xFF16387F), Color(0xFF2452C8), Color(0xFF2E63D8))
+    val darkHero = listOf(Color(0xFF0D1E3A), Color(0xFF1B3A70), Color(0xFF2C5BB0))
 }
 
 private fun lightAppColors(): Colors = lightColorScheme(

@@ -105,11 +105,13 @@ internal fun StatusBadge(
     text: String,
     color: Color,
     modifier: Modifier = Modifier,
+    /** 默认是由语义色算出的淡底；放在深色底（比如关于页那张大卡）上时要自己给 */
+    containerColor: Color = tintOf(color),
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(50))
-            .background(tintOf(color))
+            .background(containerColor)
             .padding(horizontal = 10.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
