@@ -115,9 +115,9 @@ class ScreenOffService(
                 null -> {
                     // 读不到配置。连着失败若干次就按「用户想用」处理，避免功能静默失效
                     prefFailures++
-                    logw("读取远程配置失败（第 $prefFailures 次）")
+                    logw("读取跨进程配置失败（第 $prefFailures 次）")
                     if (prefFailures >= PREF_FAILURE_FALLBACK) {
-                        logw("远程配置始终读不到，按「已启用」注册（此时跳过令牌校验）")
+                        logw("跨进程配置始终读不到，按「已启用」注册（此时跳过令牌校验）")
                         if (tryRegister()) return
                     }
                 }
@@ -128,14 +128,14 @@ class ScreenOffService(
         }
     }
 
-    /** 读取远程配置。返回 null 表示这次没读到，不要据此做任何事。 */
+    /** 读取跨进程配置（remote preferences，纯本地，不联网）。返回 null 表示这次没读到，不要据此做任何事。 */
     private fun refreshConfig(): Boolean? {
         return try {
             val p = module.getRemotePreferences(Config.PREFS_GROUP)
             cachedToken = p.getString(Config.KEY_TOKEN, "") ?: ""
             p.getBoolean(Config.KEY_SYSTEM_ENABLED, Config.DEFAULT_SYSTEM_ENABLED)
         } catch (t: Throwable) {
-            logw("读取远程配置失败，本次跳过：${t.message}")
+            logw("读取跨进程配置失败，本次跳过：${t.message}")
             null
         }
     }
@@ -352,7 +352,7 @@ class ScreenOffService(
         const val FAST_POLL_ROUNDS = 12          // 前 2 分钟每 10 秒一次
         const val SLOW_POLL_MS = 60_000L         // 之后每分钟一次，直到注册成功
 
-        /** 远程配置连着读不到这么多次，就当作用户想用，直接注册 */
+        /** 跨进程配置连着读不到这么多次，就当作用户想用，直接注册 */
         const val PREF_FAILURE_FALLBACK = 5
 
         const val REGISTER_ATTEMPTS = 3

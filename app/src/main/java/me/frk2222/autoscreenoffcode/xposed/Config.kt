@@ -10,8 +10,9 @@ import android.content.SharedPreferences
  *  2. system_server 进程（读取 token，执行息屏）
  *  3. 模块自己的 UI（写入）
  *
- * 存储位置是 libxposed 的 remote preferences（group = "config"），
- * 由框架负责跨进程同步，所以 UI 里改完立刻在 hook 侧生效。
+ * 存储位置是 libxposed 的 remote preferences（group = "config"）。
+ * 这里的 remote 指的是「跨进程」——由框架在本机负责同步给各个被 hook 的进程，
+ * 不涉及任何网络，所以 UI 里改完立刻在 hook 侧生效，也不需要重启应用。
  */
 object Config {
 

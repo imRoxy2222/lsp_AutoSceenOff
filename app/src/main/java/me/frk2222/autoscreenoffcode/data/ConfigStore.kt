@@ -7,9 +7,9 @@ import androidx.compose.runtime.setValue
 import me.frk2222.autoscreenoffcode.xposed.Config
 
 /**
- * UI 侧对 remote preferences 的读写封装。
+ * UI 侧对跨进程配置（libxposed 的 remote preferences）的读写封装。
  *
- * remote prefs 由框架负责跨进程同步，写入后 hook 侧下一次读取就能看到。
+ * 这份 prefs 由框架在本机做跨进程同步，写入后 hook 侧下一次读取就能看到，不涉及网络。
  * 每写一次就自增 revision，Compose 通过它触发重组。
  */
 object ConfigStore {
@@ -17,7 +17,7 @@ object ConfigStore {
     var revision by mutableStateOf(0)
         private set
 
-    /** 拿到 remote prefs 本体；模块未激活时返回 null */
+    /** 拿到跨进程配置本体；模块未激活时返回 null */
     fun snapshot(): SharedPreferences? = prefs()
 
     private fun prefs(): SharedPreferences? =

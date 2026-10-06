@@ -19,6 +19,7 @@ data class FrameworkInfo(
     val hasSystemCapability: Boolean
         get() = properties and XposedService.PROP_CAP_SYSTEM != 0L
 
+    /** 框架是否支持跨进程配置（remote preferences）。remote 指跨进程，不是联网。 */
     val hasRemoteCapability: Boolean
         get() = properties and XposedService.PROP_CAP_REMOTE != 0L
 }

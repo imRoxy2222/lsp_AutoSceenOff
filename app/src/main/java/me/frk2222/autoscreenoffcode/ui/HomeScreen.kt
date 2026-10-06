@@ -257,7 +257,7 @@ private fun StatusCard(
                 valueColor = if (info.hasSystemCapability) toneOk() else toneError(),
             )
             InfoRow(
-                label = "远程配置(remote)",
+                label = "跨进程配置",
                 value = if (info.hasRemoteCapability) "支持" else "不支持",
                 valueColor = if (info.hasRemoteCapability) toneOk() else toneError(),
             )
@@ -295,7 +295,7 @@ private fun stateText(state: ServiceState, appCount: Int): Triple<String, String
 
         ServiceState.SYSTEM_OFF -> Triple(
             "缺少关键开关",
-            "打开下面的「① 启用系统框架息屏」，最多 30 秒后生效，不需要重启。",
+            "打开下面的「启用系统框架息屏」，最多 30 秒后生效，不需要重启。",
             toneWarn(),
         )
 
@@ -307,20 +307,20 @@ private fun stateText(state: ServiceState, appCount: Int): Triple<String, String
 
         ServiceState.SAFE_MODE -> Triple(
             "安全模式",
-            "运行链路正常，但只会写日志不会真的息屏。先点「立即测试息屏」，确认能关屏后关掉 ②。",
+            "运行链路正常，但只会写日志不会真的息屏。先点「立即测试息屏」",
             toneWarn(),
         )
 
         ServiceState.NO_APP -> Triple(
             "等待生效",
-            "作用域里还没有应用。到「配置」里添加要托管的应用（例如抖音 / 快手 / 红果短剧）。",
+            "作用域里还没有应用。到「配置」里添加要托管的应用",
             toneWarn(),
         )
 
         ServiceState.RUNNING -> Triple(
             "已生效",
-            "共 $appCount 个应用在管理范围内",
-            toneOk(),
+            "",
+            toneWarn(),
         )
     }
 }
