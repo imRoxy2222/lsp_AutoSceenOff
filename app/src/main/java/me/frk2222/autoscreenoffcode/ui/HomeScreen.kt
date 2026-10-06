@@ -319,7 +319,7 @@ private fun stateText(state: ServiceState, appCount: Int): Triple<String, String
 
         ServiceState.RUNNING -> Triple(
             "已生效",
-            "共 $appCount 个应用在管理范围内，无操作到时会自动息屏。",
+            "共 $appCount 个应用在管理范围内",
             toneOk(),
         )
     }

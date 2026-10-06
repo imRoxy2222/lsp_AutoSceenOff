@@ -2,6 +2,8 @@ package me.frk2222.autoscreenoffcode.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,7 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,7 +30,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,6 +45,7 @@ import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** 各页面共用的小件。统一在这里，免得每处样式各写一套。 */
@@ -208,6 +223,95 @@ internal fun ChipButton(
     ) {
         Text(text = text)
     }
+}
+
+/**
+ * 数字输入框：只收数字，带上限 / 下限，光标位置正常。
+ *
+ * ★ 光标的坑：以前是 `TextFieldValue(text)` 现拼一个值传进去 —— [TextFieldValue] 不带 selection
+ * 时光标默认为 0（最前面），于是每敲一个字符光标就被拽回开头，退格键删不掉东西。
+ * 这里改成自己持有完整的 [TextFieldValue]（文本 + selection 一起存），
+ * 过滤字符时把光标按「删掉了几个字」同步挪位，光标就待在你输的地方。
+ *
+ * 下限不在打字时硬改文本 —— 想输 300 得先敲 3，一敲就被抬成 30 的话永远输不进去。
+ * 做法是：打字时照写，但**写进配置的一定是钳过的合法值**；等失焦（或点键盘上的完成）
+ * 再把输入框里的文本收敛成真正生效的那个数。
+ *
+ * @param value 当前已提交的值（外部权威值，比如从配置里读出来的）
+ * @param onValueChange 改动回调，传出来的值一定在 [min]..[max] 之间
+ * @param min 允许的最小值，由调用方按单位算好（总时长不能短于 30 秒）
+ */
+@Composable
+internal fun NumberField(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    min: Int,
+    modifier: Modifier = Modifier,
+    max: Int = 9999,
+    label: String = "数值",
+    enabled: Boolean = true,
+) {
+    var field by remember { mutableStateOf(TextFieldValue(value.toString())) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val focused by interactionSource.collectIsFocusedAsState()
+    val focusManager = LocalFocusManager.current
+
+    // 失焦 / 外部值变了 → 把文本收敛成合法值：空、小于下限、超过上限都会被拉回来。
+    // 顺手把光标挪到末尾，下次接着输入不会插在数字中间。
+    // 顺带还兼了「升级后旧配置不合法」的自愈：进页面就会把 5 秒这种历史值抬成 30 秒。
+    LaunchedEffect(value, min, max, focused) {
+        if (!focused) {
+            val parsed = field.text.toIntOrNull()
+            val fixed = parsed?.coerceIn(min, max) ?: value
+            if (parsed != fixed || field.text != fixed.toString()) {
+                val text = fixed.toString()
+                field = TextFieldValue(text, TextRange(text.length))
+                if (fixed != value) onValueChange(fixed)
+            }
+        }
+    }
+
+    TextField(
+        value = field,
+        onValueChange = { next ->
+            val filtered = next.digitsOnly(max)
+            field = filtered
+            val parsed = filtered.text.toIntOrNull() ?: return@TextField
+            onValueChange(parsed.coerceIn(min, max))
+        },
+        label = label,
+        enabled = enabled,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
+        // 点「完成」就清焦点，剩下的收敛逻辑由上面的失焦分支接管
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        interactionSource = interactionSource,
+        modifier = modifier,
+    )
+}
+
+/**
+ * 只留数字（最多 [max] 位），光标跟着一起挪。
+ *
+ * 逐字扫描时记下「原下标 -> 新下标」的映射，再把 selection 的两端映射过去，
+ * 这样删掉的是哪个位置的字符，光标就停在哪个位置，不会跳到开头。
+ */
+private fun TextFieldValue.digitsOnly(max: Int): TextFieldValue {
+    val src = text
+    val out = StringBuilder()
+    val map = IntArray(src.length + 1)
+    for (i in src.indices) {
+        map[i] = out.length
+        val c = src[i]
+        if (out.length < max && c.isDigit()) out.append(c)
+    }
+    map[src.length] = out.length
+    val start = map[selection.start.coerceIn(0, src.length)]
+    val end = map[selection.end.coerceIn(0, src.length)]
+    return TextFieldValue(out.toString(), TextRange(start, end))
 }
 
 /** 「标签 —— 值」一行。用于状态卡里的信息清单 */

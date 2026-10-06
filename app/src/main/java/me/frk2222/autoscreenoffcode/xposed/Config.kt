@@ -51,6 +51,15 @@ object Config {
     const val DEFAULT_UNIT = "m"
     const val DEFAULT_DRY_RUN = true
 
+    /** 输入框最多 4 位数字 */
+    const val MAX_VALUE = 9999L
+
+    /**
+     * 最短间隔（秒）。再短就会「息屏 → 手指一碰亮屏 → 再息屏」来回抽搐，
+     * 所以无论单位是什么，算出来的总时长都不能低于这个值。
+     */
+    const val MIN_SECONDS = 30L
+
     enum class TimeUnit(val key: String, val seconds: Long, val label: String) {
         SECOND("s", 1L, "秒"),
         MINUTE("m", 60L, "分钟"),
@@ -70,6 +79,21 @@ object Config {
 
     fun encode(value: Long, unit: TimeUnit): String = "$value|${unit.key}"
 
+    /**
+     * 某个单位下允许填的最小数值：总时长不低于 [MIN_SECONDS]，且至少是 1。
+     * 秒 -> 30，分 -> 1（60 秒），时 -> 1。
+     */
+    fun minValue(unit: TimeUnit): Long =
+        maxOf(1L, (MIN_SECONDS + unit.seconds - 1) / unit.seconds)
+
+    /** 把数值钳到合法区间：[minValue] .. [MAX_VALUE] */
+    fun clampValue(value: Long, unit: TimeUnit): Long =
+        value.coerceIn(minValue(unit), MAX_VALUE)
+
+    /** 把「数值 + 单位」换成秒，并保证不低于 [MIN_SECONDS]（兜住历史遗留的非法值） */
+    fun toSeconds(value: Long, unit: TimeUnit): Long =
+        (value * unit.seconds).coerceAtLeast(MIN_SECONDS)
+
     /** 读取某个包的原始覆盖值：null=跟随全局，"off"=不生效，"30|m"=自定义 */
     fun rawOverride(prefs: SharedPreferences, pkg: String): String? =
         prefs.getString(PREFIX_APP + pkg, null)
@@ -87,13 +111,13 @@ object Config {
                 val value = raw.substring(0, idx).toLongOrNull() ?: return -1L
                 val unit = TimeUnit.fromKey(raw.substring(idx + 1))
                 if (value <= 0L) return -1L
-                return value * unit.seconds * 1000L
+                return toSeconds(value, unit) * 1000L
             }
         }
         val value = prefs.getInt(KEY_GLOBAL_VALUE, DEFAULT_VALUE).toLong()
         if (value <= 0L) return -1L
         val unit = TimeUnit.fromKey(prefs.getString(KEY_GLOBAL_UNIT, DEFAULT_UNIT))
-        return value * unit.seconds * 1000L
+        return toSeconds(value, unit) * 1000L
     }
 
     /** 全局默认时长，格式化成人话，给 UI 显示用 */

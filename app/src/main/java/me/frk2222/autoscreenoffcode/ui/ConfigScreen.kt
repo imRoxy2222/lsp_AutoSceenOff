@@ -1,24 +1,10 @@
 package me.frk2222.autoscreenoffcode.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import me.frk2222.autoscreenoffcode.data.ConfigStore
 import me.frk2222.autoscreenoffcode.data.Framework
@@ -27,7 +13,6 @@ import me.frk2222.autoscreenoffcode.xposed.Config
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
@@ -60,12 +45,16 @@ fun ConfigScreen(
 
     var enabled by remember(rev) { mutableStateOf(ConfigStore.bool(Config.KEY_ENABLED, true)) }
     var debug by remember(rev) { mutableStateOf(ConfigStore.bool(Config.KEY_DEBUG, false)) }
-    var unitIndex by remember(rev) {
-        mutableStateOf(Config.TimeUnit.indexOfKey(ConfigStore.string(Config.KEY_GLOBAL_UNIT, Config.DEFAULT_UNIT)))
+    // ★ 这两个不挂 rev：ConfigStore 每写一次就 rev++，挂了的话用户刚敲下一位数字，
+    // 状态就被配置里的值冲掉重来（原来的写法正是这样，光标表现一塌糊涂）。
+    // 输入框自己维护文本，外部写入只在必要时由 NumberField 在失焦时同步。
+    var unitIndex by remember {
+        mutableIntStateOf(Config.TimeUnit.indexOfKey(ConfigStore.string(Config.KEY_GLOBAL_UNIT, Config.DEFAULT_UNIT)))
     }
-    var valueText by remember(rev) {
-        mutableStateOf(ConfigStore.int(Config.KEY_GLOBAL_VALUE, Config.DEFAULT_VALUE).toString())
+    var value by remember {
+        mutableIntStateOf(ConfigStore.int(Config.KEY_GLOBAL_VALUE, Config.DEFAULT_VALUE))
     }
+    val unit = Config.TimeUnit.entries[unitIndex]
 
     var hidden by remember { mutableStateOf(LauncherIcon.isHidden(context)) }
     var iconNotice by remember { mutableStateOf<Notice?>(null) }
@@ -129,39 +118,40 @@ fun ConfigScreen(
                 insideMargin = cardPadding,
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextField(
-                        value = TextFieldValue(valueText),
+                    NumberField(
+                        value = value,
                         onValueChange = { next ->
-                            val filtered = next.text.filter { it.isDigit() }.take(4)
-                            valueText = filtered
-                            val parsed = filtered.toIntOrNull()
-                            if (parsed != null && parsed >= 30) {
-                                ConfigStore.put(Config.KEY_GLOBAL_VALUE, parsed)
-                            } else {
-                                ConfigStore.put(Config.KEY_GLOBAL_VALUE, 30) // 最低设置30s, 避免陷入循环
-                            }
+                            value = next
+                            ConfigStore.put(Config.KEY_GLOBAL_VALUE, next)
                         },
+                        min = Config.minValue(unit).toInt(),
                         label = "数值",
                         enabled = activated,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Config.TimeUnit.entries.forEachIndexed { index, unit ->
+                        Config.TimeUnit.entries.forEachIndexed { index, item ->
                             ChipButton(
-                                text = unit.label,
+                                text = item.label,
                                 selected = unitIndex == index,
                                 enabled = activated,
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     unitIndex = index
-                                    ConfigStore.put(Config.KEY_GLOBAL_UNIT, unit.key)
+                                    ConfigStore.put(Config.KEY_GLOBAL_UNIT, item.key)
+                                    // 换了单位，原来的数值可能就不合法了（比如 1 分钟 -> 1 秒）
+                                    val fixed = Config.clampValue(value.toLong(), item).toInt()
+                                    if (fixed != value) {
+                                        value = fixed
+                                        ConfigStore.put(Config.KEY_GLOBAL_VALUE, fixed)
+                                    }
                                 },
                             )
                         }
                     }
-                    Hint("低于 30 会按 30 处理 —— 太快会陷入「息屏 → 亮屏 → 再息屏」的循环。" +
-                        "改完立即生效，不需要重启应用。")
+                    Hint(
+                        "最短 ${Config.MIN_SECONDS} 秒"
+                    )
                 }
             }
         }

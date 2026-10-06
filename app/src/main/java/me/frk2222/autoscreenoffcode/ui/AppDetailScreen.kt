@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -21,8 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.frk2222.autoscreenoffcode.data.ConfigStore
@@ -33,7 +31,6 @@ import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.basic.TextField
 import top.yukonga.miuix.kmp.preference.OverlayDropdownPreference
 import top.yukonga.miuix.kmp.preference.RadioButtonPreference
 
@@ -60,8 +57,9 @@ fun AppDetailScreen(
         ?: ConfigStore.int(Config.KEY_GLOBAL_VALUE, Config.DEFAULT_VALUE)
     val parsedUnit = if (raw.contains('|')) raw.substringAfter('|') else Config.DEFAULT_UNIT
 
-    var valueText by remember(rev, pkg) { mutableStateOf(parsedValue.toString()) }
-    var unitIndex by remember(rev, pkg) { mutableStateOf(Config.TimeUnit.indexOfKey(parsedUnit)) }
+    // 同配置页：不挂 rev，否则每写一次配置状态就被冲掉重来，光标会乱跳
+    var value by remember(pkg) { mutableIntStateOf(parsedValue) }
+    var unitIndex by remember(pkg) { mutableIntStateOf(Config.TimeUnit.indexOfKey(parsedUnit)) }
     var removeResult by remember { mutableStateOf<Notice?>(null) }
 
     val label = remember(pkg) { appLabel(context, pkg) }
@@ -133,23 +131,22 @@ fun AppDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     insideMargin = cardPadding,
                 ) {
-                    TextField(
-                        value = TextFieldValue(valueText),
-                        onValueChange = { next ->
-                            val filtered = next.text.filter { it.isDigit() }.take(4)
-                            valueText = filtered
-                            val parsed = filtered.toIntOrNull()
-                            if (parsed != null && parsed > 0) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        NumberField(
+                            value = value,
+                            onValueChange = { next ->
+                                value = next
                                 ConfigStore.put(
                                     key,
-                                    Config.encode(parsed.toLong(), Config.TimeUnit.entries[unitIndex]),
+                                    Config.encode(next.toLong(), Config.TimeUnit.entries[unitIndex]),
                                 )
-                            }
-                        },
-                        label = "数值",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                            },
+                            min = Config.minValue(Config.TimeUnit.entries[unitIndex]).toInt(),
+                            label = "数值",
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Hint("最短 ${Config.MIN_SECONDS} 秒，和全局同一个下限。")
+                    }
                 }
             }
             item {
@@ -160,8 +157,13 @@ fun AppDetailScreen(
                         title = "时间单位",
                         onSelectedIndexChange = { index ->
                             unitIndex = index
-                            val v = valueText.toIntOrNull() ?: Config.DEFAULT_VALUE
-                            ConfigStore.put(key, Config.encode(v.toLong(), Config.TimeUnit.entries[index]))
+                            // 换了单位，数值可能不再合法（1 分钟 -> 1 秒 就不够 30 秒了）
+                            val fixed = Config.clampValue(
+                                value.toLong(),
+                                Config.TimeUnit.entries[index],
+                            ).toInt()
+                            value = fixed
+                            ConfigStore.put(key, Config.encode(fixed.toLong(), Config.TimeUnit.entries[index]))
                         },
                     )
                 }
