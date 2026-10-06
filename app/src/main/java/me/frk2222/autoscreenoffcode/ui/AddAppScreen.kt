@@ -36,7 +36,7 @@ fun AddAppScreen(padding: PaddingValues) {
     var allApps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
-    var result by remember { mutableStateOf<String?>(null) }
+    var result by remember { mutableStateOf<Notice?>(null) }
     var busy by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf(TextFieldValue("")) }
 
@@ -79,15 +79,21 @@ fun AddAppScreen(padding: PaddingValues) {
             verticalArrangement = Arrangement.spacedBy(screenSpacing),
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    insideMargin = cardPadding,
+                ) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Button(
                             onClick = {
                                 busy = true
-                                result = "已发起申请，请在 LSPosed 弹出的确认框中同意…"
+                                result = Notice(
+                                    "已发起申请，请在 LSPosed 弹出的确认框中同意…",
+                                    NoticeTone.INFO,
+                                )
                                 requestScope(context, selected.toList()) { msg ->
                                     busy = false
-                                    result = msg
+                                    result = scopeNotice(msg)
                                     selected = emptySet()
                                 }
                             },
@@ -99,9 +105,13 @@ fun AddAppScreen(padding: PaddingValues) {
                                 else "添加 ${selected.size} 个应用到作用域",
                             )
                         }
-                        if (result != null) Hint(result!!)
+                        Hint("申请成功后，目标应用要重启才会被注入。")
                     }
                 }
+            }
+
+            if (result != null) {
+                item { NoticeCard(notice = result!!) }
             }
 
             item {

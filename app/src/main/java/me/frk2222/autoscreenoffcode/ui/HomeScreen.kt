@@ -42,21 +42,6 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
- * 卡片内边距。
- *
- * ★ MIUIX 的 [Card] 默认 `insideMargin = 0.dp`，往里直接丢文字会贴着圆角，圆角看起来就是「坏了」。
- * 所以凡是装普通内容的 Card 都要显式传这个值；16dp 是特意选的——和
- * SwitchPreference / ArrowPreference 自带的 16dp 对齐，两种卡片的文字才在同一条竖线上。
- *
- * 反过来，装 preference 组件的 Card **不要**传，让 preference 自己撑内边距，
- * 否则会变成 16+16 的双重缩进。
- */
-private val cardPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-
-/** preference 之间的分隔线：因为那张 Card 没有内边距，得自己缩进到和文字对齐 */
-private val dividerPadding = PaddingValues(horizontal = 16.dp)
-
-/**
  * 首页：一眼看清模块现在能不能用、不能用的话缺哪一步，然后把最该点的两件事摆在手边。
  *
  * 配色约定（避免到处临时取色导致混乱）：
@@ -213,12 +198,7 @@ fun HomeScreen(
         }
 
         if (notice != null) {
-            item {
-                NoticeCard(
-                    text = notice!!.text,
-                    color = notice!!.tone.color(),
-                )
-            }
+            item { NoticeCard(notice = notice!!) }
         }
 
         // ---- 其余设置都在「配置」标签 ----
@@ -234,22 +214,6 @@ fun HomeScreen(
             }
         }
     }
-}
-
-// ------------------------------------------------------------------ 操作结果
-
-private enum class NoticeTone {
-    OK, WARN, ERROR, INFO,
-}
-
-private data class Notice(val text: String, val tone: NoticeTone)
-
-@Composable
-private fun NoticeTone.color(): Color = when (this) {
-    NoticeTone.OK -> toneOk()
-    NoticeTone.WARN -> toneWarn()
-    NoticeTone.ERROR -> toneError()
-    NoticeTone.INFO -> tonePrimary()
 }
 
 // ------------------------------------------------------------------ 状态卡

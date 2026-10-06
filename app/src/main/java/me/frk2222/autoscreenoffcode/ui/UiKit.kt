@@ -33,6 +33,20 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 /** 各页面共用的小件。统一在这里，免得每处样式各写一套。 */
 
+/**
+ * 装普通内容的 [Card] 统一内边距。
+ *
+ * ★ MIUIX 的 Card 默认 `insideMargin = PaddingValues(0.dp)`，往里直接丢文字会贴着圆角，
+ * 圆角看起来就是「坏了」。16dp 是特意选的——和 SwitchPreference / ArrowPreference
+ * 自带的 16dp 一致，两种卡片的文字才在同一条竖线上。
+ *
+ * 装 preference 组件的 Card **不要**传它，否则变成 16+16 双重缩进。
+ */
+internal val cardPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+
+/** 装 preference 的 Card 里，两条之间的分割线：那张卡没有内边距，得自己缩进到和文字对齐 */
+internal val dividerPadding = PaddingValues(horizontal = 16.dp)
+
 /** 正常 / 提醒 / 异常三档语义色，比直接写死 RED / GREEN 在深浅色下都更稳 */
 @Composable
 internal fun toneOk(): Color =
@@ -109,15 +123,42 @@ internal fun StatusBadge(
 }
 
 /**
- * 一整块提示条：结论 + 说明，底色跟着语义走。
+ * 操作结果的语气。决定提示条底色，避免到处临时判断「这句该是什么颜色」。
+ * INFO = 单纯的进行中 / 中性说明，用主色。
+ */
+internal enum class NoticeTone {
+    OK, WARN, ERROR, INFO,
+}
+
+/** 一次操作的结果：说了什么 + 用什么语气 */
+internal data class Notice(val text: String, val tone: NoticeTone)
+
+@Composable
+internal fun NoticeTone.toneColor(): Color = when (this) {
+    NoticeTone.OK -> toneOk()
+    NoticeTone.WARN -> toneWarn()
+    NoticeTone.ERROR -> toneError()
+    NoticeTone.INFO -> tonePrimary()
+}
+
+/**
+ * 框架回调（申请 / 移除作用域）的一句话 -> 提示条。
+ * 那些回调只给字符串，成功文案都以「已」开头（「已加入…」「已把…移出…」），
+ * 其余按失败处理，这样不用把每条文案的语气记在各页面里。
+ */
+internal fun scopeNotice(msg: String): Notice =
+    Notice(msg, if (msg.startsWith("已")) NoticeTone.OK else NoticeTone.ERROR)
+
+/**
+ * 一整块提示条：圆点 + 说明，底色跟着语义走。
  * 给操作结果用，比一句灰色小字更容易被看见。
  */
 @Composable
 internal fun NoticeCard(
-    text: String,
-    color: Color,
+    notice: Notice,
     modifier: Modifier = Modifier,
 ) {
+    val color = notice.tone.toneColor()
     Card(
         modifier = modifier.fillMaxWidth(),
         insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
@@ -132,7 +173,7 @@ internal fun NoticeCard(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 modifier = Modifier.weight(1f),
-                text = text,
+                text = notice.text,
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 color = MiuixTheme.colorScheme.onSurface,

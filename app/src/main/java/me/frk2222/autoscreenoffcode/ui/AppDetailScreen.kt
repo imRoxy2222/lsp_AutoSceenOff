@@ -62,7 +62,7 @@ fun AppDetailScreen(
 
     var valueText by remember(rev, pkg) { mutableStateOf(parsedValue.toString()) }
     var unitIndex by remember(rev, pkg) { mutableStateOf(Config.TimeUnit.indexOfKey(parsedUnit)) }
-    var removeResult by remember { mutableStateOf<String?>(null) }
+    var removeResult by remember { mutableStateOf<Notice?>(null) }
 
     val label = remember(pkg) { appLabel(context, pkg) }
 
@@ -74,7 +74,10 @@ fun AppDetailScreen(
         verticalArrangement = Arrangement.spacedBy(screenSpacing),
     ) {
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = cardPadding,
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(pkg = pkg, label = label, size = 44.dp)
                     Spacer(modifier = Modifier.width(12.dp))
@@ -101,7 +104,7 @@ fun AppDetailScreen(
                         selected = mode == AppMode.FOLLOW,
                         onClick = { ConfigStore.remove(key) },
                     )
-                    HorizontalDivider()
+                    HorizontalDivider(modifier = Modifier.padding(dividerPadding))
                     RadioButtonPreference(
                         title = "单独设置",
                         summary = "只对这个应用生效的时长",
@@ -112,7 +115,7 @@ fun AppDetailScreen(
                             ConfigStore.put(key, Config.encode(v.toLong(), Config.TimeUnit.fromKey(u)))
                         },
                     )
-                    HorizontalDivider()
+                    HorizontalDivider(modifier = Modifier.padding(dividerPadding))
                     RadioButtonPreference(
                         title = "该应用不生效",
                         summary = "无论全局怎么设置，这个应用都不自动息屏",
@@ -126,7 +129,10 @@ fun AppDetailScreen(
         if (mode == AppMode.CUSTOM) {
             item { SmallTitle(text = "单独时长") }
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    insideMargin = cardPadding,
+                ) {
                     TextField(
                         value = TextFieldValue(valueText),
                         onValueChange = { next ->
@@ -147,28 +153,33 @@ fun AppDetailScreen(
                 }
             }
             item {
-                OverlayDropdownPreference(
-                    items = Config.TimeUnit.LABELS,
-                    selectedIndex = unitIndex,
-                    title = "时间单位",
-                    onSelectedIndexChange = { index ->
-                        unitIndex = index
-                        val v = valueText.toIntOrNull() ?: Config.DEFAULT_VALUE
-                        ConfigStore.put(key, Config.encode(v.toLong(), Config.TimeUnit.entries[index]))
-                    },
-                )
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    OverlayDropdownPreference(
+                        items = Config.TimeUnit.LABELS,
+                        selectedIndex = unitIndex,
+                        title = "时间单位",
+                        onSelectedIndexChange = { index ->
+                            unitIndex = index
+                            val v = valueText.toIntOrNull() ?: Config.DEFAULT_VALUE
+                            ConfigStore.put(key, Config.encode(v.toLong(), Config.TimeUnit.entries[index]))
+                        },
+                    )
+                }
             }
         }
 
         item { SmallTitle(text = "作用域") }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = cardPadding,
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
                         onClick = {
                             removeScope(context, pkg) { msg ->
-                                removeResult = msg
+                                removeResult = scopeNotice(msg)
                                 if (msg.startsWith("已把")) onRemoved()
                             }
                         },
@@ -177,16 +188,13 @@ fun AppDetailScreen(
                     ) {
                         Text("从作用域移除")
                     }
+                    Hint("移除后要重启这个应用，注入才会真正停下来。")
                 }
             }
         }
 
         if (removeResult != null) {
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Hint(removeResult!!)
-                }
-            }
+            item { NoticeCard(notice = removeResult!!) }
         }
     }
 }
