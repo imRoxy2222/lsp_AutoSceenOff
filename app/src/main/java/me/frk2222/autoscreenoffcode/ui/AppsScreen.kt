@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -19,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.KeyboardType
@@ -88,9 +88,11 @@ fun AppsScreen(
             val summary = remember(rev, pkg) {
                 if (prefs != null) Config.effectiveText(prefs, pkg) else "模块未激活"
             }
+            val label = remember(pkg) { appLabel(context, pkg) }
             ArrowPreference(
-                title = appLabel(context, pkg),
+                title = label,
                 summary = summary,
+                startAction = { AppIcon(pkg = pkg, label = label) },
                 onClick = { onOpenApp(pkg) },
             )
         }
@@ -283,7 +285,7 @@ fun AddAppScreen(padding: PaddingValues) {
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Text(if (loading) "正在读取应用列表…" else "手机上共 ${allApps.size} 个应用可添加")
-                Text("这里列出的是手机上**全部**已安装应用，不受推荐列表限制。勾选后点下面的按钮向 LSPosed 申请，在它弹出的确认框里同意即可。")
+                Text("这里列出的是手机上全部已安装应用，不受推荐列表限制。勾选后点下面的按钮向 LSPosed 申请，在它弹出的确认框里同意即可。")
             }
         }
 
@@ -327,7 +329,8 @@ fun AddAppScreen(padding: PaddingValues) {
             BasicComponent(
                 title = app.label,
                 summary = if (app.hasLauncher) app.pkg else "${app.pkg}（无桌面图标）",
-                startAction = {
+                startAction = { AppIcon(pkg = app.pkg, label = app.label) },
+                endActions = {
                     Checkbox(
                         state = if (checked) ToggleableState.On else ToggleableState.Off,
                         onClick = null,
