@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import me.frk2222.autoscreenoffcode.data.Framework
 import me.frk2222.autoscreenoffcode.ui.AppRoot
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import me.frk2222.autoscreenoffcode.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         Framework.bind()
         setContent {
-            MiuixTheme {
+            AppTheme {
                 AppRoot()
             }
         }
