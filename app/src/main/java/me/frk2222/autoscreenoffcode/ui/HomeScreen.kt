@@ -33,6 +33,7 @@ import me.frk2222.autoscreenoffcode.data.Framework
 import me.frk2222.autoscreenoffcode.data.FrameworkInfo
 import me.frk2222.autoscreenoffcode.xposed.Config
 import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.SmallTitle
@@ -41,10 +42,27 @@ import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 /**
+ * 卡片内边距。
+ *
+ * ★ MIUIX 的 [Card] 默认 `insideMargin = 0.dp`，往里直接丢文字会贴着圆角，圆角看起来就是「坏了」。
+ * 所以凡是装普通内容的 Card 都要显式传这个值；16dp 是特意选的——和
+ * SwitchPreference / ArrowPreference 自带的 16dp 对齐，两种卡片的文字才在同一条竖线上。
+ *
+ * 反过来，装 preference 组件的 Card **不要**传，让 preference 自己撑内边距，
+ * 否则会变成 16+16 的双重缩进。
+ */
+private val cardPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+
+/** preference 之间的分隔线：因为那张 Card 没有内边距，得自己缩进到和文字对齐 */
+private val dividerPadding = PaddingValues(horizontal = 16.dp)
+
+/**
  * 首页：一眼看清模块现在能不能用、不能用的话缺哪一步，然后把最该点的两件事摆在手边。
  *
- * 顶部是状态卡（结论 + 必要的运行时信息），下面是快捷操作，
- * 具体调参全部挪到「配置」标签，首页不留噪音。
+ * 配色约定（避免到处临时取色导致混乱）：
+ * - 一张卡里**最多一个语义色**，只给「结论」用（状态圆点 / 大标题 / 徽章 / 提示条）；
+ * - 说明文字一律走 [Hint]（次要灰），不要用语义色；
+ * - 信息清单的取值，只有「支持 / 不支持」这种二值判断才上色，其余用正文色。
  */
 @Composable
 fun HomeScreen(
@@ -68,7 +86,8 @@ fun HomeScreen(
         Config.TimeUnit.fromKey(ConfigStore.string(Config.KEY_GLOBAL_UNIT, Config.DEFAULT_UNIT)).label
     }
 
-    var resultText by remember { mutableStateOf<String?>(null) }
+    /** 操作结果。tone 决定提示条底色，别用灰色小字糊过去 */
+    var notice by remember { mutableStateOf<Notice?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -77,6 +96,7 @@ fun HomeScreen(
         contentPadding = screenPadding,
         verticalArrangement = Arrangement.spacedBy(screenSpacing),
     ) {
+        // ---- 状态：一眼结论 ----
         item {
             val state = remember(activated, info, enabled, systemEnabled, dryRun, appCount) {
                 serviceState(
@@ -91,26 +111,32 @@ fun HomeScreen(
             StatusCard(state = state, info = info, appCount = appCount)
         }
 
+        // ---- 当前配置：只读，改要去「配置」标签 ----
+        item { SmallTitle(text = "当前配置") }
+
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = cardPadding,
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Hint("全局无操作时长")
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "$globalValue $globalUnit",
-                            fontSize = 20.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = tonePrimary(),
                         )
                     }
-                    Text(
+                    Spacer(modifier = Modifier.width(12.dp))
+                    StatusBadge(
                         text = if (enabled) "计时中" else "已停用",
-                        fontSize = 13.sp,
-                        color = toneMuted(),
+                        color = if (enabled) toneOk() else toneMuted(),
                     )
                 }
             }
@@ -125,26 +151,38 @@ fun HomeScreen(
                     SwitchPreference(
                         checked = systemEnabled,
                         onCheckedChange = { next ->
-                            resultText = if (ConfigStore.put(Config.KEY_SYSTEM_ENABLED, next)) {
-                                if (next) "已开启，system_server 会在 30 秒内完成注册"
-                                else "已关闭，息屏请求将无人执行"
+                            notice = if (ConfigStore.put(Config.KEY_SYSTEM_ENABLED, next)) {
+                                if (next) {
+                                    Notice(
+                                        "已开启，system_server 会在 30 秒内完成注册",
+                                        NoticeTone.OK,
+                                    )
+                                } else {
+                                    Notice("已关闭，息屏请求将无人执行", NoticeTone.WARN)
+                                }
                             } else {
-                                "写入失败：模块未激活，请先在 LSPosed 里启用本模块并勾选「系统框架」"
+                                Notice(
+                                    "写入失败：模块未激活，请先在 LSPosed 里启用本模块并勾选「系统框架」",
+                                    NoticeTone.ERROR,
+                                )
                             }
                         },
                         title = "① 启用息屏功能(必开)",
                         summary = "息屏必须由系统进程执行，不开这个所有请求都没人处理",
                         enabled = activated,
                     )
-                    HorizontalDivider()
+                    HorizontalDivider(modifier = Modifier.padding(dividerPadding))
                     SwitchPreference(
                         checked = dryRun,
                         onCheckedChange = { next ->
-                            resultText = if (ConfigStore.put(Config.KEY_DRY_RUN, next)) {
-                                if (next) "已回到安全模式：只写日志，不会真的息屏"
-                                else "安全模式已关闭，功能正式生效"
+                            notice = if (ConfigStore.put(Config.KEY_DRY_RUN, next)) {
+                                if (next) {
+                                    Notice("已回到安全模式：只写日志，不会真的息屏", NoticeTone.WARN)
+                                } else {
+                                    Notice("安全模式已关闭，功能正式生效", NoticeTone.OK)
+                                }
                             } else {
-                                "写入失败：模块未激活"
+                                Notice("写入失败：模块未激活", NoticeTone.ERROR)
                             }
                         },
                         title = "② 安全模式（DEBUG）",
@@ -156,13 +194,17 @@ fun HomeScreen(
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                insideMargin = cardPadding,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Hint("验证链路是否可用，不受安全模式限制")
                     Button(
-                        onClick = { testScreenOff(context) { resultText = it } },
+                        onClick = { testScreenOff(context) { notice = it } },
                         enabled = activated,
                         modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColorsPrimary(),
                     ) {
                         Text("立即测试息屏")
                     }
@@ -170,23 +212,44 @@ fun HomeScreen(
             }
         }
 
-        if (resultText != null) {
+        if (notice != null) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Hint(resultText!!)
-                }
+                NoticeCard(
+                    text = notice!!.text,
+                    color = notice!!.tone.color(),
+                )
             }
         }
 
         // ---- 其余设置都在「配置」标签 ----
+        item { SmallTitle(text = "更多设置") }
+
         item {
-            ArrowPreference(
-                title = "调时长 · 加应用",
-                summary = "全局默认时长、单个应用单独设置",
-                onClick = onGoConfig,
-            )
+            Card(modifier = Modifier.fillMaxWidth()) {
+                ArrowPreference(
+                    title = "调时长 · 加应用",
+                    summary = "全局默认时长、单个应用单独设置",
+                    onClick = onGoConfig,
+                )
+            }
         }
     }
+}
+
+// ------------------------------------------------------------------ 操作结果
+
+private enum class NoticeTone {
+    OK, WARN, ERROR, INFO,
+}
+
+private data class Notice(val text: String, val tone: NoticeTone)
+
+@Composable
+private fun NoticeTone.color(): Color = when (this) {
+    NoticeTone.OK -> toneOk()
+    NoticeTone.WARN -> toneWarn()
+    NoticeTone.ERROR -> toneError()
+    NoticeTone.INFO -> tonePrimary()
 }
 
 // ------------------------------------------------------------------ 状态卡
@@ -220,42 +283,66 @@ private fun StatusCard(
     appCount: Int,
 ) {
     val (headline, detail, tone) = stateText(state, appCount)
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusDot(color = tone)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = headline,
-                    fontSize = 19.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = tone,
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Hint(detail)
-            Spacer(modifier = Modifier.height(10.dp))
-            HorizontalDivider()
-            Spacer(modifier = Modifier.height(8.dp))
-            if (state == ServiceState.INACTIVE) {
-                InfoRow("框架", "未连接", valueColor = toneError())
-            } else {
-                InfoRow("框架", "${info.name} ${info.version}".trim().ifEmpty { "已连接" })
-                InfoRow("Xposed API", if (info.apiVersion == 0) "-" else info.apiVersion.toString())
-                InfoRow(
-                    label = "息屏能力(system)",
-                    value = if (info.hasSystemCapability) "支持" else "不支持",
-                    valueColor = if (info.hasSystemCapability) toneOk() else toneError(),
-                )
-                InfoRow(
-                    label = "远程配置(remote)",
-                    value = if (info.hasRemoteCapability) "支持" else "不支持",
-                    valueColor = if (info.hasRemoteCapability) toneOk() else toneError(),
-                )
-                InfoRow("已生效作用域", "$appCount 个应用")
-            }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        insideMargin = cardPadding,
+    ) {
+        // 结论区：语义色只出现在这里（圆点 + 大标题 + 徽章）
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StatusDot(color = tone, size = 10.dp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                modifier = Modifier.weight(1f),
+                text = headline,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = tone,
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            StatusBadge(text = state.badge(), color = tone)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Hint(detail)
+
+        Spacer(modifier = Modifier.height(14.dp))
+        HorizontalDivider()
+
+        // 信息清单：只有二值判断才上色，其余走正文色
+        Spacer(modifier = Modifier.height(10.dp))
+        if (state == ServiceState.INACTIVE) {
+            InfoRow("框架", "未连接", valueColor = toneError())
+        } else {
+            InfoRow("框架", "${info.name} ${info.version}".trim().ifEmpty { "已连接" })
+            InfoRow("Xposed API", if (info.apiVersion == 0) "-" else info.apiVersion.toString())
+            InfoRow(
+                label = "息屏能力(system)",
+                value = if (info.hasSystemCapability) "支持" else "不支持",
+                valueColor = if (info.hasSystemCapability) toneOk() else toneError(),
+            )
+            InfoRow(
+                label = "远程配置(remote)",
+                value = if (info.hasRemoteCapability) "支持" else "不支持",
+                valueColor = if (info.hasRemoteCapability) toneOk() else toneError(),
+            )
+            InfoRow("已生效作用域", "$appCount 个应用")
         }
     }
+}
+
+/** 状态卡右上角那个徽章的词。短一点，长了会把标题挤变形 */
+private fun ServiceState.badge(): String = when (this) {
+    ServiceState.INACTIVE -> "待处理"
+    ServiceState.NO_SYSTEM_SCOPE -> "待处理"
+    ServiceState.SYSTEM_OFF -> "待处理"
+    ServiceState.DISABLED -> "已关闭"
+    ServiceState.SAFE_MODE -> "演练中"
+    ServiceState.NO_APP -> "待处理"
+    ServiceState.RUNNING -> "工作中"
 }
 
 @Composable
@@ -310,14 +397,23 @@ private fun stateText(state: ServiceState, appCount: Int): Triple<String, String
 
 /**
  * 点一次就走完「开开关 → 发广播 → 看屏幕到底灭没灭」。
- * 2.5 秒后自检屏幕状态：没灭就把最可能的几个原因说清楚，省得去翻 logcat。
+ * 1 秒后自检屏幕状态：没灭就把最可能的几个原因说清楚，省得去翻 logcat。
  */
-private fun testScreenOff(context: Context, onResult: (String) -> Unit) {
+private fun testScreenOff(context: Context, onResult: (Notice) -> Unit) {
     if (!ConfigStore.bool(Config.KEY_SYSTEM_ENABLED, Config.DEFAULT_SYSTEM_ENABLED)) {
         val ok = ConfigStore.put(Config.KEY_SYSTEM_ENABLED, true)
         onResult(
-            if (ok) "已替你打开「系统框架息屏」。system_server 会在 30 秒内完成注册，请等一会儿再点一次。"
-            else "写入配置失败：模块未激活。请先在 LSPosed 里启用本模块并勾选「系统框架」，再重启。",
+            if (ok) {
+                Notice(
+                    "已替你打开「① 启用息屏功能」。system_server 会在 30 秒内完成注册，请等一会儿再点一次。",
+                    NoticeTone.INFO,
+                )
+            } else {
+                Notice(
+                    "写入配置失败：模块未激活。请先在 LSPosed 里启用本模块并勾选「系统框架」，再重启。",
+                    NoticeTone.ERROR,
+                )
+            },
         )
         return
     }
@@ -331,11 +427,11 @@ private fun testScreenOff(context: Context, onResult: (String) -> Unit) {
 
     runCatching { context.sendBroadcast(intent) }
         .onFailure {
-            onResult("发送广播失败：${it.message}")
+            onResult(Notice("发送广播失败：${it.message}", NoticeTone.ERROR))
             return
         }
 
-    onResult("已发送，1 秒后自检…")
+    onResult(Notice("已发送，1 秒后自检…", NoticeTone.INFO))
 
     Handler(Looper.getMainLooper()).postDelayed({
         val pm = runCatching {
@@ -344,13 +440,21 @@ private fun testScreenOff(context: Context, onResult: (String) -> Unit) {
         val stillOn = pm == null || runCatching { pm.isInteractive }.getOrDefault(true)
         if (stillOn) {
             onResult(
-                "屏幕没反应 —— system_server 侧没有执行息屏。按顺序检查：" +
-                    "① LSPosed 作用域里勾选了「系统框架」；② 勾选后重启过手机；" +
-                    "③ 首页「① 启用系统框架息屏」已打开且等满 30 秒；" +
-                    "④ 日志：adb logcat -s AutoScreenOff",
+                Notice(
+                    "屏幕没反应 —— system_server 侧没有执行息屏。按顺序检查：" +
+                        "① LSPosed 作用域里勾选了「系统框架」；② 勾选后重启过手机；" +
+                        "③ 首页「① 启用息屏功能」已打开且等满 30 秒；" +
+                        "④ 日志：adb logcat -s AutoScreenOff",
+                    NoticeTone.ERROR,
+                )
             )
         } else {
-            onResult("息屏成功。现在可以在首页关掉「② 安全模式」，功能就正式启用了。")
+            onResult(
+                Notice(
+                    "息屏成功。现在可以在首页关掉「② 安全模式」，功能就正式启用了。",
+                    NoticeTone.OK,
+                )
+            )
         }
     }, 1000)
 }

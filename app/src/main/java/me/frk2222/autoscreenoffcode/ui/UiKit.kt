@@ -3,11 +3,15 @@ package me.frk2222.autoscreenoffcode.ui
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,6 +26,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.frk2222.autoscreenoffcode.ui.theme.AppSemantic
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -47,15 +53,92 @@ internal fun toneMuted(): Color = MiuixTheme.colorScheme.onSurfaceVariantSummary
 @Composable
 internal fun tonePrimary(): Color = MiuixTheme.colorScheme.primary
 
+/**
+ * 语义色 -> 同色系淡底。
+ *
+ * 不能直接 `color.copy(alpha = 0.2f)`：那样会透出下层卡片颜色，深浅色下深浅不一。
+ * 把语义色按很小比例混进卡片底色，得到一张「有颜色但不刺眼」的底，用来做徽章 / 提示卡。
+ */
+@Composable
+internal fun tintOf(color: Color, fraction: Float = 0.14f): Color {
+    val base = MiuixTheme.colorScheme.surfaceContainer
+    return Color(
+        red = base.red + (color.red - base.red) * fraction,
+        green = base.green + (color.green - base.green) * fraction,
+        blue = base.blue + (color.blue - base.blue) * fraction,
+    )
+}
+
 /** 状态圆点 */
 @Composable
-internal fun StatusDot(color: Color, size: Dp = 8.dp) {
+internal fun StatusDot(color: Color, size: Dp = 8.dp, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(size)
             .clip(CircleShape)
             .background(color),
     )
+}
+
+/**
+ * 小徽章（圆角胶囊 + 淡色底 + 同色文字）。
+ *
+ * 像「计时中 / 已停用 / 支持 / 不支持」这种只有两三个字的状态词，
+ * 光靠文字颜色区分会显得散，给它一个自己的底色块才看得住。
+ */
+@Composable
+internal fun StatusBadge(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(tintOf(color))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = color,
+        )
+    }
+}
+
+/**
+ * 一整块提示条：结论 + 说明，底色跟着语义走。
+ * 给操作结果用，比一句灰色小字更容易被看见。
+ */
+@Composable
+internal fun NoticeCard(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        insideMargin = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        colors = CardDefaults.defaultColors(color = tintOf(color, 0.12f)),
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            StatusDot(
+                color = color,
+                size = 8.dp,
+                modifier = Modifier.padding(top = 5.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                modifier = Modifier.weight(1f),
+                text = text,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = MiuixTheme.colorScheme.onSurface,
+            )
+        }
+    }
 }
 
 /** 「标签 —— 值」一行。用于状态卡里的信息清单 */
@@ -68,7 +151,7 @@ internal fun InfoRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 5.dp),
+            .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
