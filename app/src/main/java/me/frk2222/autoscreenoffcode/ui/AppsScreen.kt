@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -22,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -29,7 +29,10 @@ import io.github.libxposed.service.XposedService
 import me.frk2222.autoscreenoffcode.data.ConfigStore
 import me.frk2222.autoscreenoffcode.data.Framework
 import me.frk2222.autoscreenoffcode.xposed.Config
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextField
@@ -103,8 +106,10 @@ fun AppsScreen(
 }
 
 @Composable
-fun AppDetailScreen(padding: PaddingValues, pkg: String) {
+fun AppDetailScreen(padding: PaddingValues, pkg: String, onRemoved: () -> Unit) {
+    val context = LocalContext.current
     val rev = ConfigStore.revision
+    var removeResult by remember { mutableStateOf<String?>(null) }
     val key = Config.PREFIX_APP + pkg
     val raw = remember(rev, pkg) { ConfigStore.string(key, "") }
     val prefs = ConfigStore.snapshot()
@@ -205,28 +210,69 @@ fun AppDetailScreen(padding: PaddingValues, pkg: String) {
                 Text("规则：这个应用在前台时，超过设定时长没有任何触摸或按键操作就息屏；不在乎是否在播放视频。")
             }
         }
+
+        item { SmallTitle(text = "作用域") }
+
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Text("把这个应用从模块作用域里移除，之后它不再受本模块管理（也可以在 LSPosed 里取消勾选）。")
+                    Button(
+                        onClick = {
+                            removeScope(context, pkg) { msg ->
+                                removeResult = msg
+                                if (msg.startsWith("已把")) onRemoved()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("从作用域移除")
+                    }
+                    if (removeResult != null) Text(removeResult!!)
+                }
+            }
+        }
     }
 }
 
 private enum class Mode { FOLLOW, CUSTOM, OFF }
 
+/**
+ * 向框架申请把应用加入作用域。
+ *
+ * 流程：App 勾选 → 调 service.requestScope() → LSPosed 弹确认框 → 用户同意 →
+ * 回调 onScopeRequestApproved → 框架自动把该应用勾进本模块的作用域。
+ * 注意：申请成功后目标 App 需要重启（强行停止）才会被注入。
+ */
 @Composable
-fun AddAppScreen(padding: PaddingValues, onDone: () -> Unit) {
+fun AddAppScreen(padding: PaddingValues) {
     val context = LocalContext.current
     val scope = Framework.info.scope
-    var apps by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var allApps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var result by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf(TextFieldValue("")) }
 
     DisposableEffect(Unit) {
         val thread = Thread {
             val list = loadInstalledApps(context, scope)
             runOnMain {
-                apps = list
+                allApps = list
                 loading = false
             }
         }
         thread.start()
         onDispose { thread.interrupt() }
+    }
+
+    val q = query.text.trim().lowercase()
+    val visible = remember(allApps, q) {
+        if (q.isEmpty()) allApps
+        else allApps.filter {
+            it.label.lowercase().contains(q) || it.pkg.lowercase().contains(q)
+        }
     }
 
     LazyColumn(
@@ -236,56 +282,139 @@ fun AddAppScreen(padding: PaddingValues, onDone: () -> Unit) {
     ) {
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
-                Text(if (loading) "正在读取应用列表…" else "共 ${apps.size} 个可添加的应用")
-                Text("点击后向框架发起申请，需要在弹出的确认框里同意。")
+                Text(if (loading) "正在读取应用列表…" else "手机上共 ${allApps.size} 个应用可添加")
+                Text("这里列出的是手机上**全部**已安装应用，不受推荐列表限制。勾选后点下面的按钮向 LSPosed 申请，在它弹出的确认框里同意即可。")
             }
         }
 
-        items(apps, key = { it.first }) { (pkg, label) ->
-            ArrowPreference(
-                title = label,
-                summary = pkg,
-                onClick = { requestScope(context, pkg, onDone) },
+        item {
+            TextField(
+                value = query,
+                onValueChange = { query = it },
+                label = "搜索应用名或包名",
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Button(
+                        onClick = {
+                            busy = true
+                            result = "已发起申请，请在 LSPosed 弹出的确认框中同意…"
+                            requestScope(context, selected.toList()) { msg ->
+                                busy = false
+                                result = msg
+                                selected = emptySet()
+                            }
+                        },
+                        enabled = selected.isNotEmpty() && !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            if (selected.isEmpty()) "请先勾选应用"
+                            else "向框架申请添加 ${selected.size} 个应用"
+                        )
+                    }
+                    if (result != null) Text(result!!)
+                }
+            }
+        }
+
+        items(visible, key = { it.pkg }) { app ->
+            val checked = app.pkg in selected
+            BasicComponent(
+                title = app.label,
+                summary = if (app.hasLauncher) app.pkg else "${app.pkg}（无桌面图标）",
+                startAction = {
+                    Checkbox(
+                        state = if (checked) ToggleableState.On else ToggleableState.Off,
+                        onClick = null,
+                    )
+                },
+                onClick = {
+                    selected = if (checked) selected - app.pkg else selected + app.pkg
+                },
             )
         }
     }
 }
 
-private fun loadInstalledApps(context: Context, scope: List<String>): List<Pair<String, String>> {
+/**
+ * 列出手机上**所有**已安装的应用。
+ *
+ * 不再只看有桌面图标的：很多目标（以及系统组件）没有 launcher activity，
+ * 但照样可以被勾进作用域并被 hook。有桌面图标的排在前面，方便找。
+ *
+ * 注意：需要 manifest 里声明 QUERY_ALL_PACKAGES + <queries>，
+ * 否则 Android 11+ 的包可见性限制会让这里只返回寥寥几个。
+ */
+private fun loadInstalledApps(context: Context, scope: List<String>): List<AppEntry> {
     val pm = context.packageManager
-    val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    return runCatching { pm.queryIntentActivities(launcher, 0) }
-        .getOrDefault(emptyList())
-        .mapNotNull { it.activityInfo?.packageName }
-        .filter { it !in scope && it != context.packageName }
-        .distinct()
-        .map { it to appLabel(context, it) }
-        .sortedBy { it.second.lowercase() }
+    val self = context.packageName
+
+    val launcherPkgs = mutableSetOf<String>()
+    runCatching {
+        val probe = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        pm.queryIntentActivities(probe, 0).mapNotNullTo(launcherPkgs) { it.activityInfo?.packageName }
+    }
+
+    val installed = runCatching { pm.getInstalledApplications(0) }.getOrDefault(emptyList())
+
+    val list = ArrayList<AppEntry>(installed.size)
+    for (info in installed) {
+        val pkg = info.packageName
+        if (pkg == self || pkg in scope) continue
+        list.add(AppEntry(pkg, appLabel(context, pkg), pkg in launcherPkgs))
+    }
+    // 有桌面图标的在前，其余按名称排
+    list.sortWith(compareByDescending<AppEntry> { it.hasLauncher }.thenBy { it.label.lowercase() })
+    return list
 }
 
-private fun requestScope(context: Context, pkg: String, onDone: () -> Unit) {
+private data class AppEntry(val pkg: String, val label: String, val hasLauncher: Boolean)
+
+private fun requestScope(context: Context, pkgs: List<String>, onResult: (String) -> Unit) {
     val service = Framework.service
     if (service == null) {
-        Toast.makeText(context, "模块未激活", Toast.LENGTH_SHORT).show()
+        onResult("模块未激活，无法申请。请先在 LSPosed 里启用本模块。")
         return
     }
     runCatching {
-        service.requestScope(listOf(pkg), object : XposedService.OnScopeEventListener {
+        service.requestScope(pkgs, object : XposedService.OnScopeEventListener {
             override fun onScopeRequestApproved(approved: List<String>) {
                 runOnMain {
                     Framework.refresh()
-                    Toast.makeText(context, "已添加：${approved.joinToString()}", Toast.LENGTH_SHORT).show()
-                    onDone()
+                    onResult(
+                        "已加入作用域 ${approved.size} 个：${approved.joinToString()}。" +
+                            "请强行停止（或重启）这些应用，模块才会注入生效。"
+                    )
                 }
             }
 
             override fun onScopeRequestFailed(message: String) {
-                runOnMain {
-                    Toast.makeText(context, "添加失败：$message", Toast.LENGTH_SHORT).show()
-                }
+                runOnMain { onResult("申请失败：$message") }
             }
         })
     }.onFailure {
-        Toast.makeText(context, "请求失败：${it.message}", Toast.LENGTH_SHORT).show()
+        runOnMain { onResult("请求异常：${it.message}") }
     }
+}
+
+/** 反向操作：把应用从本模块作用域里移除，之后它不再受本模块管理 */
+private fun removeScope(context: Context, pkg: String, onResult: (String) -> Unit) {
+    val service = Framework.service
+    if (service == null) {
+        onResult("模块未激活，无法移除。")
+        return
+    }
+    runCatching { service.removeScope(listOf(pkg)) }
+        .onSuccess {
+            runOnMain {
+                Framework.refresh()
+                onResult("已把 ${appLabel(context, pkg)} 移出作用域。")
+            }
+        }
+        .onFailure { runOnMain { onResult("移除失败：${it.message}") } }
 }

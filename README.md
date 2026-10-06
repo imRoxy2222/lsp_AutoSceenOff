@@ -88,6 +88,18 @@ adb shell pm enable me.frk2222.autoscreenoffcode/.LauncherAlias
 
 注意：切换后桌面图标可能要等桌面刷新或重启桌面才生效，属正常现象。升级安装时入口从 Activity 换到了 alias，桌面图标位置可能变动。
 
+### 在 App 内申请 / 移除作用域
+
+不必每次都去 LSPosed 里勾。「应用设置 → 添加应用」里勾选后点「向框架申请添加」，会调用 `XposedService.requestScope()`，LSPosed 弹出确认框，同意后自动勾进本模块作用域。反向操作在应用详情页的「从作用域移除」，调用 `removeScope()`。
+
+要点：
+
+- `scope.list` 只是**推荐列表**，决定 LSPosed 里默认展示哪些应用；`module.prop` 里 `staticScope=false`，所以任何应用都可以被勾选，不限于这个列表。
+- **「添加应用」列出的是手机上全部已安装应用**（含没有桌面图标的系统组件），不是只列 `scope.list` 里的几个。
+- Android 11（API 30）起有包可见性限制，manifest 里必须声明 `QUERY_ALL_PACKAGES` + `<queries>`（MAIN/LAUNCHER），否则 `getInstalledApplications` / `queryIntentActivities` 只会返回寥寥几个。这是本项目最容易踩的坑之一。
+- 申请成功后，目标 App 必须**强行停止或重启**才会被注入生效。
+- 申请结果通过 `OnScopeEventListener` 回调，界面上直接显示批准了哪几个。
+
 ### 排查
 
 日志用 logcat 过滤标签 `AutoScreenOff` 查看。打开「详细日志」后，每 5 秒会打印一次 `已 Xs / Ys` 的倒计时。

@@ -2,6 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      Android 11（API 30）起有「包可见性」限制：默认只能看到极少数应用，
+      queryIntentActivities / getInstalledApplications 都会返回不全。
+      要让「添加应用」能列出手机上全部软件，必须显式声明。
+
+      用 QUERY_ALL_PACKAGES 是为了连没有桌面图标的系统组件也能列出来并申请。
+      本模块不上架应用商店，不受商店对该权限的政策限制。
+    -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!-- 双保险：部分 ROM 会限制 QUERY_ALL_PACKAGES，有这条至少能看到所有有界面的应用 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

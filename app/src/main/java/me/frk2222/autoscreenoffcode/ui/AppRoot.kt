@@ -82,11 +82,12 @@ fun AppRoot() {
                 onAddApp = { stack.add(Screen.AddApp) },
             )
 
-            Screen.AppDetail -> AppDetailScreen(padding = padding, pkg = detailPkg)
-            Screen.AddApp -> AddAppScreen(
+            Screen.AppDetail -> AppDetailScreen(
                 padding = padding,
-                onDone = { stack.removeAt(stack.lastIndex) },
+                pkg = detailPkg,
+                onRemoved = { stack.removeAt(stack.lastIndex) },
             )
+            Screen.AddApp -> AddAppScreen(padding = padding)
 
             Screen.Help -> HelpScreen(padding)
         }
