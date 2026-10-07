@@ -7,8 +7,6 @@
 - 时长 = 数值 + 单位（秒 / 分 / 时），可动态修改；
 - UI 使用 MIUIX 风格（纯因为好看，非小米专属）。
 
-> 当前进度：**功能代码已完成并编译通过**，等待真机验证。首次启用默认是「安全模式」，只写日志不真正息屏。
-
 ---
 
 ## 二、工作原理
@@ -45,6 +43,7 @@
 6. 再设置时长：
    - **全局默认时长**：「配置」标签，数值 + 单位（秒 / 分钟 / 小时），默认 30 分钟，也有预设值可一键点选。
    - **应用单独设置**：「配置」标签下半部分，每个已勾选的应用可单独设为「跟随全局 / 单独设置 / 该应用不生效」。
+   - **息屏前提醒**：同上，默认开启。距息屏只剩约 10 秒（两次检测）时，在被托管的应用上弹一条带倒计时的提示条，并**一直显示**到用户动一下屏幕（取消本次息屏）或真的息屏为止。
 7. 确认息屏可用后，回**首页关掉「② 安全模式」**，功能才真正生效。
 
 ### 界面结构
@@ -54,7 +53,7 @@
 | 标签     | 内容                                                                                                                                                                                    |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **首页** | 顶部状态卡：一句话结论 + 引导，下面列出框架 / Xposed API / 息屏能力 / 跨进程配置 / 已生效作用域；中部是全局时长概览与「① 启用系统框架息屏」「② 安全模式」两个必点开关和「立即测试息屏」 |
-| **配置** | 全局设置（总开关、详细日志）→ 无操作时长（数值 + 单位 + 四个预设）→ 应用单独设置（列表 + 添加应用）→ 界面（隐藏桌面图标）                                                               |
+| **配置** | 全局设置（总开关、详细日志、息屏前提醒）→ 无操作时长（数值 + 单位 + 四个预设）→ 应用单独设置（列表 + 添加应用）→ 界面（隐藏桌面图标）                                                     |
 | **关于** | 应用信息与版本、GitHub 项目地址、开机异常时的紧急自救方法                                                                                                                               |
 
 > 「关于」页的仓库地址写在 `ui/AboutScreen.kt` 顶部的 `GITHUB_URL` 常量里，只改那一处即可。
@@ -89,16 +88,6 @@ hook `system_server` 的风险在于：里面**任何一个线程抛出未捕获
 **隐藏后怎么打开**：`MainActivity` 声明了 Xposed 生态惯例的 category `de.robv.android.xposed.category.MODULE_SETTINGS`。LSPosed 的「启动」菜单**优先**查这个 category 并用 `setClassName` 显式启动（`AppHelper.getSettingsIntent`），跟有没有桌面图标无关。所以：
 
 > LSPosed → 模块 → **长按**本模块 → 「启动」
-
-**万一真进不来**（图标没了又找不到入口），用电脑执行：
-
-```bash
-adb shell pm enable io.github.imroxy2222.autoscreenoffcode/.LauncherAlias
-```
-
-或在 LSPosed 里取消启用本模块再重新启用。
-
-注意：切换后桌面图标可能要等桌面刷新或重启桌面才生效，属正常现象。升级安装时入口从 Activity 换到了 alias，桌面图标位置可能变动。
 
 ### 在 App 内申请 / 移除作用域
 
@@ -179,17 +168,6 @@ Gradle 必须 9.x（AGP 9 要求的 Gradle 版本）
 
 MIUIX 从 0.9.0 到 0.9.4 **全部**要求 `minCompileSdk=37`，所以「降 MIUIX 版本来适配 Gradle 8」这条路是死的。
 
-### 关于 vfox 里的 kotlin / gradle 版本
-
-**它们是无效的**，不会参与本项目的构建：
-
-- Gradle 用的是 `gradle-wrapper.properties` 里指定的发行包，**不是** `vfox use gradle` 的那个；
-- Kotlin 编译器是 Gradle 从 Maven 拉的 `kotlin-gradle-plugin`，版本由 `libs.versions.toml` 决定，**不是** `vfox use kotlin` 的那个。
-
-所以你之前用 vfox 装的 Kotlin 2.3.20 / Gradle 8.11.1 都**没有**被这个项目用上（实际生效的是 2.4.20 / 9.5.0）。唯一真正需要本机提供的是 **JDK 17**。
-
----
-
 ## 三、环境准备（只做一次）
 
 1. **JDK 17**：确保 `java -version` 输出 17.x。Android Studio 里确认 `Settings → Build Tools → Gradle → Gradle JDK` 选的是 17。
@@ -242,33 +220,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 | 查看所有可用任务             | `gradlew.bat tasks`                                                     |
 | 只编译不打包（快速查语法错） | `gradlew.bat :app:compileDebugKotlin`                                   |
 
-### 4.4 常用附加参数
-
-| 参数                     | 作用                                           |
-| ------------------------ | ---------------------------------------------- |
-| `--console=plain`        | 输出不带进度动画，方便重定向到日志文件         |
-| `--info` / `--debug`     | 输出更详细日志，排查依赖问题时用               |
-| `--stacktrace`           | 报错时打印堆栈                                 |
-| `--offline`              | 离线构建，只用本地缓存（依赖已下载完时可加速） |
-| `--refresh-dependencies` | 强制重新解析依赖（怀疑缓存损坏时用）           |
-| `--no-daemon`            | 不用守护进程，内存紧张时用                     |
-
-例子：
-
-```bash
-gradlew.bat :app:assembleDebug --console=plain --stacktrace
-```
-
-### 4.5 用 Android Studio 图形界面
-
-不想敲命令的话：
-
-- `Build → Make Project`（只编译）
-- `Build → Build Bundle(s) / APK(s) → Build APK(s)`（打包，等价于 assembleDebug）
-- `Build → Generate Signed Bundle / APK...`（带签名打包，推荐发布时用这个）
-- 三角形 **Run** 按钮 = 编译 + 安装 + 启动
-
-### 4.6 产物位置
+### 4.4 产物位置
 
 | 构建类型              | 输出路径                                                 |
 | --------------------- | -------------------------------------------------------- |
@@ -313,66 +265,7 @@ gradlew.bat :app:assembleRelease
 
 > `keystore.properties`、`*.jks`、`*.keystore` 已加入 `.gitignore`，不会被提交。
 
-### 方式 B：用 apksigner 手动签名
-
-先做 zipalign 对齐，再签名（顺序不能反）：
-
-```bash
-set BT=C:\Users\<你>\AppData\Local\Android\Sdk\build-tools\36.0.0
-
-%BT%\zipalign -v -p 4 app-release-unsigned.apk app-release-aligned.apk
-
-%BT%\apksigner sign --ks autoscreenoff.jks ^
-  --ks-key-alias autoscreenoff ^
-  --out app-release.apk app-release-aligned.apk
-```
-
-验证签名：
-
-```bash
-%BT%\apksigner verify -v app-release.apk
-```
-
----
-
-## 六、目录结构
-
-```
-code/
-├── app/
-│   ├── build.gradle.kts          # 模块构建配置：SDK 版本、依赖、签名
-│   ├── proguard-rules.pro        # 混淆规则（含 libxposed 官方规则）
-│   └── src/main/
-│       ├── AndroidManifest.xml
-│       ├── java/me/frk2222/autoscreenoffcode/
-│       │   └── MainActivity.kt
-│       └── res/                  # 图标、主题、字符串
-├── gradle/
-│   ├── libs.versions.toml        # ★ 所有版本号集中在这里
-│   └── wrapper/gradle-wrapper.properties   # ★ Gradle 发行版版本
-├── gradle.properties             # AndroidX 开关、配置缓存等
-├── settings.gradle.kts           # 仓库地址、模块声明
-└── gradlew.bat / gradlew         # Gradle 启动器（不要手改）
-```
-
-**改版本只动两个文件**：`gradle/libs.versions.toml` 和 `gradle/wrapper/gradle-wrapper.properties`。
-
----
-
-## 七、常见报错与处理
-
-| 报错关键信息                                                      | 原因                                                | 处理                                                                                               |
-| ----------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `Remote host terminated the handshake` / `Could not download ...` | 代理或网络抖动，依赖没下下来                        | 先直接重试一次；反复失败就在 `~/.gradle/gradle.properties` 配好代理，或加 `--refresh-dependencies` |
-| `Requires compileSdk 37` / `minCompileSdk=37`                     | SDK Platform 37 没装                                | SDK Manager 装 API 37                                                                              |
-| `Gradle JVM ... incompatible` / JDK 版本相关                      | 用了非 JDK 17                                       | 切回 JDK 17                                                                                        |
-| `useAndroidX` 相关报错                                            | `gradle.properties` 里缺 `android.useAndroidX=true` | 该文件已配置好，别删                                                                               |
-| 首次构建卡在 `Downloading gradle-9.5.0-bin.zip`                   | 网络问题导致发行包下不动                            | 用浏览器 / 下载工具取回 zip，或换个网络环境重试                                                    |
-| 改了版本号但构建没变化                                            | 配置缓存命中                                        | 加 `--rerun-tasks`，或删掉 `.gradle` 与 `app/build` 后重建                                         |
-
----
-
-## 九、代码结构
+## 六、代码结构
 
 ```
 app/src/main/
@@ -386,6 +279,7 @@ app/src/main/
     │   ├── HookEntry.kt         # 入口：区分 system_server / 普通 App
     │   ├── AppMonitor.kt        # 目标 App 侧：记录操作、计时、发广播
     │   ├── ScreenOffService.kt  # system_server 侧：收广播、反射 goToSleep
+    │   ├── WarnToast.kt         # 息屏前提示条：常悬浮窗 + 倒计时，触屏/息屏才收
     │   └── Config.kt            # 配置键与解析（三处共用）
     ├── data/
     │   ├── Framework.kt         # 框架服务绑定与能力位
@@ -403,15 +297,4 @@ app/src/main/
         ├── ScopeApi.kt          # requestScope / removeScope 封装
         └── AppIcon.kt           # 应用图标异步加载 + LruCache
 ```
-
-## 十、后续计划
-
-- [x] 工具链调通，Debug / Release 编译通过
-- [x] Xposed 骨架与元数据
-- [x] 无操作检测链路
-- [x] system_server 侧息屏执行（多签名探测 + 重试 + 能力位检查）
-- [x] 配置通道与 MIUIX 界面（全局 + 单应用）
-- [ ] 真机验证：HyperOS 3 / ColorOS 16 / Flyme 9
-- [ ] 自检页增强（显示各 ROM 上 goToSleep 是否真的可用）
-- [ ] 可选：息屏同时暂停播放（hook MediaSession / AudioManager）
 

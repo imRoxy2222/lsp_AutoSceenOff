@@ -61,7 +61,7 @@ private const val ICON_WORKERS = 2
 private const val ICON_QUEUE_CAPACITY = 48
 
 /** 预热最多解多少个。切到「全部」时可能有几百个应用，全解一遍要好几秒还会把缓存挤爆 */
-private const val ICON_PRELOAD_LIMIT = 200
+private const val ICON_PRELOAD_LIMIT = 64
 
 /** 包名 -> 已解码图标。LruCache 自身方法带 synchronized，worker 和主线程都能直接读写 */
 private val iconCache = object : LruCache<String, Bitmap>(ICON_CACHE_BYTES) {

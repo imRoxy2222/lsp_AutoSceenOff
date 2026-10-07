@@ -45,6 +45,7 @@ fun ConfigScreen(
 
     var enabled by remember(rev) { mutableStateOf(ConfigStore.bool(Config.KEY_ENABLED, true)) }
     var debug by remember(rev) { mutableStateOf(ConfigStore.bool(Config.KEY_DEBUG, false)) }
+    var warn by remember(rev) { mutableStateOf(ConfigStore.bool(Config.KEY_WARN, Config.DEFAULT_WARN)) }
     // ★ 这两个不挂 rev：ConfigStore 每写一次就 rev++，挂了的话用户刚敲下一位数字，
     // 状态就被配置里的值冲掉重来（原来的写法正是这样，光标表现一塌糊涂）。
     // 输入框自己维护文本，外部写入只在必要时由 NumberField 在失焦时同步。
@@ -103,6 +104,21 @@ fun ConfigScreen(
                         },
                         title = "详细日志",
                         summary = "logcat 过滤标签 AutoScreenOff 可看倒计时",
+                        enabled = activated,
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(dividerPadding))
+                    SwitchPreference(
+                        checked = warn,
+                        onCheckedChange = { next ->
+                            warn = next
+                            ConfigStore.put(Config.KEY_WARN, next)
+                        },
+                        title = "息屏前提醒",
+                        summary = if (warn) {
+                            "距息屏约 10 秒时弹提示并一直显示，动一下屏幕就能取消"
+                        } else {
+                            "到点直接息屏，不提前提醒"
+                        },
                         enabled = activated,
                     )
                 }

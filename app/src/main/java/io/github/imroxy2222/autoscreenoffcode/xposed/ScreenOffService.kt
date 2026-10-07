@@ -81,7 +81,7 @@ class ScreenOffService(
 
     fun start() {
         guard {
-            if (module.getFrameworkProperties() and XposedInterface.PROP_CAP_SYSTEM == 0L) {
+            if (module.frameworkProperties and XposedInterface.PROP_CAP_SYSTEM == 0L) {
                 logw("框架未声明 PROP_CAP_SYSTEM，不注册息屏接收器")
                 return@guard
             }
@@ -323,7 +323,7 @@ class ScreenOffService(
             }
         }
         t.uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { th, e ->
-            runCatching { loge("线程 ${th?.name} 未捕获异常", e) }
+            runCatching { loge("线程 ${th.name} 未捕获异常", e) }
         }
         t.start()
     }

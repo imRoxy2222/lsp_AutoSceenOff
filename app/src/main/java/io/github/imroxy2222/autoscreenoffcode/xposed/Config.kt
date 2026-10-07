@@ -29,6 +29,7 @@ object Config {
     const val KEY_ENABLED = "enabled"          // 总开关
     const val KEY_DRY_RUN = "dry_run"          // 安全模式：只记日志，不真正息屏
     const val KEY_DEBUG = "debug"              // 详细日志
+    const val KEY_WARN = "warn"                // 息屏前先弹一条提示（提前约 10 秒）
     const val KEY_TOKEN = "token"              // 校验令牌，防止别人伪造广播
 
     /**
@@ -51,6 +52,7 @@ object Config {
     const val DEFAULT_VALUE = 30
     const val DEFAULT_UNIT = "m"
     const val DEFAULT_DRY_RUN = true
+    const val DEFAULT_WARN = true
 
     /** 输入框最多 4 位数字 */
     const val MAX_VALUE = 9999L

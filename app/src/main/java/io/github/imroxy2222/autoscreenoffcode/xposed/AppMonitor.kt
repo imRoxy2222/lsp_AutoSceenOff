@@ -13,6 +13,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
+import java.lang.ref.WeakReference
 
 /**
  * 目标 App 进程内的「无操作检测」。
@@ -21,7 +22,8 @@ import io.github.libxposed.api.XposedModule
  *  1. hook Activity.dispatchTouchEvent / dispatchKeyEvent —— 有任何触摸或按键就算一次操作；
  *  2. hook Activity.onResume / onPause —— 只有 App 在前台时才计时（后台时不干扰用户用别的 App）；
  *     同时把「回到前台」也算作一次操作，这样亮屏后重新计时；
- *  3. 每 5 秒检查一次：距上次操作是否已超过设定时长，超过就发广播让 system_server 息屏。
+ *  3. 每 5 秒检查一次：距上次操作是否已超过设定时长，超过就发广播让 system_server 息屏；
+ *  4. 距离息屏只剩两次检测（约 10 秒）时先弹一条提示条，用户动一下屏幕就能取消。
  *
  * 这里**不在乎**是否在播放视频、有没有 WakeLock，只看有没有操作。
  */
@@ -40,8 +42,15 @@ class AppMonitor(
     @Volatile
     private var resumedCount = 0
 
+    /** 本轮「已经弹过息屏提醒」，用户一动屏幕就清掉，下次进窗口还能再弹 */
+    @Volatile
+    private var warned = false
+
     private var appContext: Context? = null
     private var prefs: SharedPreferences? = null
+
+    /** 最近的那个 Activity，只留弱引用，别把人家的页面拽住不放 */
+    private var activityRef: WeakReference<Activity>? = null
 
     fun install() {
         val activity = Class.forName("android.app.Activity", false, classLoader)
@@ -52,8 +61,9 @@ class AppMonitor(
                 .setPriority(XposedInterface.PRIORITY_DEFAULT)
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept { chain ->
-                    captureContext(chain.getThisObject())
+                    captureContext(chain.thisObject)
                     lastInteractionMs = SystemClock.elapsedRealtime()
+                    WarnToast.dismiss()
                     chain.proceed()
                 }
         }
@@ -64,8 +74,9 @@ class AppMonitor(
                 .setPriority(XposedInterface.PRIORITY_DEFAULT)
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept { chain ->
-                    captureContext(chain.getThisObject())
+                    captureContext(chain.thisObject)
                     lastInteractionMs = SystemClock.elapsedRealtime()
+                    WarnToast.dismiss()
                     chain.proceed()
                 }
         }
@@ -76,10 +87,12 @@ class AppMonitor(
                 .setPriority(XposedInterface.PRIORITY_DEFAULT)
                 .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
                 .intercept { chain ->
-                    captureContext(chain.getThisObject())
+                    captureContext(chain.thisObject)
                     val result = chain.proceed()
                     resumedCount++
                     lastInteractionMs = SystemClock.elapsedRealtime()
+                    // 回到前台等于一次操作，提示条该收了
+                    WarnToast.dismiss()
                     result
                 }
         }
@@ -92,6 +105,8 @@ class AppMonitor(
                 .intercept { chain ->
                     val result = chain.proceed()
                     if (resumedCount > 0) resumedCount--
+                    // 退到后台就别把提示条留在人家屏幕上
+                    WarnToast.dismiss()
                     result
                 }
         }
@@ -107,9 +122,13 @@ class AppMonitor(
                 if (pm != null && !pm.isInteractive) {
                     // 屏幕已经是关的，重置计时，等下次亮屏再算
                     lastInteractionMs = SystemClock.elapsedRealtime()
+                    WarnToast.dismiss()
                 } else {
                     checkTimeout()
                 }
+            } else {
+                // 不在前台（比如被别的页面盖住），提示条收掉，别挡着别人
+                WarnToast.dismiss()
             }
         } catch (t: Throwable) {
             logw("定时检测异常：${t.message}")
@@ -128,20 +147,59 @@ class AppMonitor(
             return
         }
 
+        val dryRun = p.getBoolean(Config.KEY_DRY_RUN, Config.DEFAULT_DRY_RUN)
         val now = SystemClock.elapsedRealtime()
         val idle = now - lastInteractionMs
-        if (idle < timeout) {
+        val remain = timeout - idle
+
+        // 还没进预警窗口：把「已提醒」标记清掉，用户动过屏幕后下次再进窗口还能提醒；
+        // 顺手收一下提示条（触屏那几个 hook 已经收过了，这里是兜底）
+        if (remain > WARN_AHEAD_MS) {
+            warned = false
+            WarnToast.dismiss()
             if (debug) logd("已 ${idle / 1000}s / ${timeout / 1000}s")
             return
         }
 
+        // 进入预警窗口：距息屏只剩两次检测（约 10 秒）。提示条弹出来就一直挂着，
+        // 直到用户动一下屏幕（那几个 hook 里收）或者真的息屏（下面收）
+        if (remain > 0L) {
+            if (!warned && p.getBoolean(Config.KEY_WARN, Config.DEFAULT_WARN)) {
+                warned = true
+                // 传预计息屏的时刻，提示条自己倒数到 0
+                val ok = WarnToast.show(
+                    foregroundActivity(),
+                    appContext,
+                    lastInteractionMs + timeout,
+                    dryRun,
+                )
+                if (ok) {
+                    if (debug) logd("已弹出息屏提醒，剩余约 ${remain / 1000}s")
+                } else {
+                    logw("息屏提醒没弹出来（已退回系统 Toast）")
+                }
+            }
+            return
+        }
+
+        // 到点了：先收提示条（息屏后它没意义了，也不能留在下次亮屏的画面上），
+        // 再息屏，并把提醒标记复位，等下一轮重新计时
+        warned = false
+        WarnToast.dismiss()
         lastInteractionMs = now
-        if (p.getBoolean(Config.KEY_DRY_RUN, Config.DEFAULT_DRY_RUN)) {
+        if (dryRun) {
             logi("[安全模式] $pkg 已 ${idle / 1000}s 无操作，本应息屏（未执行）")
             return
         }
         logi("$pkg 已 ${idle / 1000}s 无操作，请求息屏")
         requestScreenOff(p)
+    }
+
+    /** 当前还活着的前台 Activity，拿不到就返回 null（调用方会退回系统 Toast） */
+    private fun foregroundActivity(): Activity? {
+        val act = activityRef?.get() ?: return null
+        if (act.isFinishing || act.isDestroyed) return null
+        return act
     }
 
     private fun requestScreenOff(p: SharedPreferences) {
@@ -159,9 +217,11 @@ class AppMonitor(
     }
 
     private fun captureContext(thisObject: Any?) {
+        val act = thisObject as? Activity ?: return
         if (appContext == null) {
-            appContext = (thisObject as? Activity)?.applicationContext
+            appContext = act.applicationContext
         }
+        activityRef = WeakReference(act)
     }
 
     private fun hookSafely(name: String, block: () -> Unit) {
@@ -182,5 +242,8 @@ class AppMonitor(
 
     private companion object {
         const val TICK_MS = 5_000L
+
+        /** 提前多久弹提醒：两次检测，也就是 10 秒左右 */
+        const val WARN_AHEAD_MS = 2 * TICK_MS
     }
 }

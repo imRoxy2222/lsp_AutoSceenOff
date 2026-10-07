@@ -18,12 +18,12 @@ class HookEntry : XposedModule() {
     private var screenOff: ScreenOffService? = null
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
-        isSystemServer = param.isSystemServer()
+        isSystemServer = param.isSystemServer
         logd(
             "模块载入：process=${param.processName}, systemServer=$isSystemServer, " +
-                "framework=${getFrameworkName()} ${getFrameworkVersion()}, api=${getApiVersion()}"
+                "framework=${frameworkName} ${frameworkVersion}, api=${apiVersion}"
         )
-        if (isSystemServer && getFrameworkProperties() and PROP_CAP_SYSTEM == 0L) {
+        if (isSystemServer && frameworkProperties and PROP_CAP_SYSTEM == 0L) {
             logw("当前框架缺少 PROP_CAP_SYSTEM 能力位，息屏功能不可用")
         }
     }
@@ -39,10 +39,10 @@ class HookEntry : XposedModule() {
 
     override fun onPackageReady(param: PackageReadyParam) {
         if (isSystemServer) return
-        if (!param.isFirstPackage()) return
+        if (!param.isFirstPackage) return
         val pkg = param.packageName
         if (pkg.isEmpty() || pkg == "android" || pkg == "system") return
-        if (pkg == getModuleApplicationInfo().packageName) return
+        if (pkg == moduleApplicationInfo.packageName) return
         runCatching {
             val m = AppMonitor(this, pkg, param.classLoader)
             monitor = m
