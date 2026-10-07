@@ -1,12 +1,12 @@
-package me.frk2222.autoscreenoffcode
+package io.github.imroxy2222.autoscreenoffcode
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import me.frk2222.autoscreenoffcode.data.Framework
-import me.frk2222.autoscreenoffcode.ui.AppRoot
-import me.frk2222.autoscreenoffcode.ui.theme.AppTheme
+import io.github.imroxy2222.autoscreenoffcode.data.Framework
+import io.github.imroxy2222.autoscreenoffcode.ui.AppRoot
+import io.github.imroxy2222.autoscreenoffcode.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
 

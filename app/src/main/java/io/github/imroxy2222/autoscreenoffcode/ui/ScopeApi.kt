@@ -1,10 +1,10 @@
-package me.frk2222.autoscreenoffcode.ui
+package io.github.imroxy2222.autoscreenoffcode.ui
 
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import io.github.imroxy2222.autoscreenoffcode.data.Framework
 import io.github.libxposed.service.XposedService
-import me.frk2222.autoscreenoffcode.data.Framework
 
 /** LSPosed 作用域改动相关的共用代码。 */
 

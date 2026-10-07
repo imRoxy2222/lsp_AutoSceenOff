@@ -1,4 +1,4 @@
-package me.frk2222.autoscreenoffcode.xposed
+package io.github.imroxy2222.autoscreenoffcode.xposed
 
 import android.content.BroadcastReceiver
 import android.content.Context

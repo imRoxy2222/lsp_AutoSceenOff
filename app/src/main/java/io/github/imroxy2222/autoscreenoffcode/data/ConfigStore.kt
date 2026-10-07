@@ -1,10 +1,11 @@
-package me.frk2222.autoscreenoffcode.data
+package io.github.imroxy2222.autoscreenoffcode.data
 
 import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import me.frk2222.autoscreenoffcode.xposed.Config
+import io.github.imroxy2222.autoscreenoffcode.xposed.Config
+import java.util.*
 
 /**
  * UI 侧对跨进程配置（libxposed 的 remote preferences）的读写封装。
@@ -55,7 +56,7 @@ object ConfigStore {
     fun ensureToken(): String {
         val existing = string(Config.KEY_TOKEN, "")
         if (existing.isNotEmpty()) return existing
-        val token = java.util.UUID.randomUUID().toString().replace("-", "")
+        val token = UUID.randomUUID().toString().replace("-", "")
         put(Config.KEY_TOKEN, token)
         return token
     }

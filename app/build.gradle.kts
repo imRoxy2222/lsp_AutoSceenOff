@@ -14,17 +14,17 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "me.frk2222.autoscreenoffcode"
+    namespace = "io.github.imroxy2222.autoscreenoffcode"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "me.frk2222.autoscreenoffcode"
+        applicationId = "io.github.imroxy2222.autoscreenoffcode"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

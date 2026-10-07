@@ -1,11 +1,8 @@
-package me.frk2222.autoscreenoffcode.xposed
+package io.github.imroxy2222.autoscreenoffcode.xposed
 
 import android.util.Log
-import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
-import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
-import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
-import io.github.libxposed.api.XposedModuleInterface.SystemServerStartingParam
+import io.github.libxposed.api.XposedModuleInterface.*
 
 /**
  * 模块入口。整个模块只有这一个入口类（libxposed 要求单入口才支持热重载）。
@@ -26,7 +23,7 @@ class HookEntry : XposedModule() {
             "模块载入：process=${param.processName}, systemServer=$isSystemServer, " +
                 "framework=${getFrameworkName()} ${getFrameworkVersion()}, api=${getApiVersion()}"
         )
-        if (isSystemServer && getFrameworkProperties() and XposedInterface.PROP_CAP_SYSTEM == 0L) {
+        if (isSystemServer && getFrameworkProperties() and PROP_CAP_SYSTEM == 0L) {
             logw("当前框架缺少 PROP_CAP_SYSTEM 能力位，息屏功能不可用")
         }
     }

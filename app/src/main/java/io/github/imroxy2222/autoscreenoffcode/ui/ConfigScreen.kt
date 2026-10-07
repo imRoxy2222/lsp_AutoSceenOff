@@ -1,4 +1,4 @@
-package me.frk2222.autoscreenoffcode.ui
+package io.github.imroxy2222.autoscreenoffcode.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -6,10 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import me.frk2222.autoscreenoffcode.data.ConfigStore
-import me.frk2222.autoscreenoffcode.data.Framework
-import me.frk2222.autoscreenoffcode.data.LauncherIcon
-import me.frk2222.autoscreenoffcode.xposed.Config
+import io.github.imroxy2222.autoscreenoffcode.data.ConfigStore
+import io.github.imroxy2222.autoscreenoffcode.data.Framework
+import io.github.imroxy2222.autoscreenoffcode.data.LauncherIcon
+import io.github.imroxy2222.autoscreenoffcode.xposed.Config
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.SmallTitle

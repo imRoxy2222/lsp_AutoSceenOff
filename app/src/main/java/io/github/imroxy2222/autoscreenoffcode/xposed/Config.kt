@@ -1,4 +1,4 @@
-package me.frk2222.autoscreenoffcode.xposed
+package io.github.imroxy2222.autoscreenoffcode.xposed
 
 import android.content.SharedPreferences
 
@@ -20,7 +20,7 @@ object Config {
     const val PREFS_GROUP = "config"
 
     // ---- 广播 ----
-    const val ACTION_SCREEN_OFF = "me.frk2222.autoscreenoffcode.action.SCREEN_OFF"
+    const val ACTION_SCREEN_OFF = "io.github.imroxy2222.autoscreenoffcode.action.SCREEN_OFF"
     const val EXTRA_TOKEN = "token"
     const val EXTRA_PACKAGE = "package"
     const val EXTRA_FORCE = "force"

@@ -1,4 +1,4 @@
-package me.frk2222.autoscreenoffcode.ui
+package io.github.imroxy2222.autoscreenoffcode.ui
 
 import android.content.Context
 import android.content.Intent
@@ -15,8 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import io.github.imroxy2222.autoscreenoffcode.data.Framework
 import kotlinx.coroutines.launch
-import me.frk2222.autoscreenoffcode.data.Framework
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Filter

@@ -1,4 +1,4 @@
-package me.frk2222.autoscreenoffcode.data
+package io.github.imroxy2222.autoscreenoffcode.data
 
 import android.content.ComponentName
 import android.content.Context

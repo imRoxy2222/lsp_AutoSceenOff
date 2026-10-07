@@ -1,4 +1,4 @@
-package me.frk2222.autoscreenoffcode.ui
+package io.github.imroxy2222.autoscreenoffcode.ui
 
 import android.content.Context
 import android.content.Intent
@@ -15,10 +15,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.frk2222.autoscreenoffcode.data.ConfigStore
-import me.frk2222.autoscreenoffcode.data.Framework
-import me.frk2222.autoscreenoffcode.data.FrameworkInfo
-import me.frk2222.autoscreenoffcode.xposed.Config
+import io.github.imroxy2222.autoscreenoffcode.data.ConfigStore
+import io.github.imroxy2222.autoscreenoffcode.data.Framework
+import io.github.imroxy2222.autoscreenoffcode.data.FrameworkInfo
+import io.github.imroxy2222.autoscreenoffcode.xposed.Config
 import top.yukonga.miuix.kmp.basic.*
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 

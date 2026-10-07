@@ -1,14 +1,9 @@
-package me.frk2222.autoscreenoffcode.ui.theme
+package io.github.imroxy2222.autoscreenoffcode.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import top.yukonga.miuix.kmp.theme.ColorSchemeMode
-import top.yukonga.miuix.kmp.theme.Colors
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.ThemeController
-import top.yukonga.miuix.kmp.theme.darkColorScheme
-import top.yukonga.miuix.kmp.theme.lightColorScheme
+import top.yukonga.miuix.kmp.theme.*
 
 /**
  * 本模块自己的配色。

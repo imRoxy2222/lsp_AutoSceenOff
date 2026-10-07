@@ -51,11 +51,11 @@
 
 底部三个标签，切标签各自保留自己的层级（跟微信一样，返回键只弹当前标签）：
 
-| 标签 | 内容 |
-|---|---|
+| 标签     | 内容                                                                                                                                                                                    |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **首页** | 顶部状态卡：一句话结论 + 引导，下面列出框架 / Xposed API / 息屏能力 / 跨进程配置 / 已生效作用域；中部是全局时长概览与「① 启用系统框架息屏」「② 安全模式」两个必点开关和「立即测试息屏」 |
-| **配置** | 全局设置（总开关、详细日志）→ 无操作时长（数值 + 单位 + 四个预设）→ 应用单独设置（列表 + 添加应用）→ 界面（隐藏桌面图标） |
-| **关于** | 应用信息与版本、GitHub 项目地址、开机异常时的紧急自救方法 |
+| **配置** | 全局设置（总开关、详细日志）→ 无操作时长（数值 + 单位 + 四个预设）→ 应用单独设置（列表 + 添加应用）→ 界面（隐藏桌面图标）                                                               |
+| **关于** | 应用信息与版本、GitHub 项目地址、开机异常时的紧急自救方法                                                                                                                               |
 
 > 「关于」页的仓库地址写在 `ui/AboutScreen.kt` 顶部的 `GITHUB_URL` 常量里，只改那一处即可。
 
@@ -93,7 +93,7 @@ hook `system_server` 的风险在于：里面**任何一个线程抛出未捕获
 **万一真进不来**（图标没了又找不到入口），用电脑执行：
 
 ```bash
-adb shell pm enable me.frk2222.autoscreenoffcode/.LauncherAlias
+adb shell pm enable io.github.imroxy2222.autoscreenoffcode/.LauncherAlias
 ```
 
 或在 LSPosed 里取消启用本模块再重新启用。
@@ -124,42 +124,42 @@ adb shell pm enable me.frk2222.autoscreenoffcode/.LauncherAlias
 
 ### 工具链
 
-| 组件 | 版本 | 是否需要你安装 | 说明 |
-|---|---|---|---|
-| JDK | **17**（本机 17.0.2） | ✅ 必须 | AGP 9 与 Gradle 9 都要求 JDK 17。**不要用 JDK 25**，Gradle 会直接报错 |
-| Gradle | **9.5.0** | ❌ 自动 | 由 `gradle/wrapper/gradle-wrapper.properties` 指定，首次运行时自动下载 |
-| Android Gradle Plugin (AGP) | **9.3.3** | ❌ Maven 拉取 | 版本写在 `gradle/libs.versions.toml` 的 `agp` |
-| Kotlin（含 Compose 编译器插件） | **2.4.20** | ❌ Maven 拉取 | 同上，`kotlin` 项；Compose 编译器版本必须与 Kotlin 版本一致 |
-| Android SDK Platform | **API 37**（android-37.0） | ✅ 必须 | `compileSdk` |
-| Android SDK Build-Tools | **36.0.0** | ✅ 必须 | 打包 / zipalign / apksigner 都在这里 |
-| Android SDK Platform-Tools | 最新 | ✅ 必须 | 提供 `adb` |
-| Android Studio | 最新稳定版 | 推荐 | 不是编译必需项，但管理 SDK、看 logcat、调 Compose 预览很方便 |
+| 组件                            | 版本                       | 是否需要你安装 | 说明                                                                   |
+| ------------------------------- | -------------------------- | -------------- | ---------------------------------------------------------------------- |
+| JDK                             | **17**（本机 17.0.2）      | ✅ 必须        | AGP 9 与 Gradle 9 都要求 JDK 17。**不要用 JDK 25**，Gradle 会直接报错  |
+| Gradle                          | **9.5.0**                  | ❌ 自动        | 由 `gradle/wrapper/gradle-wrapper.properties` 指定，首次运行时自动下载 |
+| Android Gradle Plugin (AGP)     | **9.3.3**                  | ❌ Maven 拉取  | 版本写在 `gradle/libs.versions.toml` 的 `agp`                          |
+| Kotlin（含 Compose 编译器插件） | **2.4.20**                 | ❌ Maven 拉取  | 同上，`kotlin` 项；Compose 编译器版本必须与 Kotlin 版本一致            |
+| Android SDK Platform            | **API 37**（android-37.0） | ✅ 必须        | `compileSdk`                                                           |
+| Android SDK Build-Tools         | **36.0.0**                 | ✅ 必须        | 打包 / zipalign / apksigner 都在这里                                   |
+| Android SDK Platform-Tools      | 最新                       | ✅ 必须        | 提供 `adb`                                                             |
+| Android Studio                  | 最新稳定版                 | 推荐           | 不是编译必需项，但管理 SDK、看 logcat、调 Compose 预览很方便           |
 
 ### 编译参数（`app/build.gradle.kts`）
 
-| 参数 | 值 | 含义 |
-|---|---|---|
-| `compileSdk` | **37** | 用哪一版 Android SDK 编译。**不能降**，原因见下节 |
-| `targetSdk` | **36** | 声明适配到的最高版本，影响系统行为策略 |
-| `minSdk` | **26** | 最低可安装版本，即 Android 8.0 |
-| `versionCode` / `versionName` | 1 / "1.0" | 发版时在这里改 |
-| Java 兼容级别 | **17** | `sourceCompatibility` / `targetCompatibility` |
+| 参数                          | 值        | 含义                                              |
+| ----------------------------- | --------- | ------------------------------------------------- |
+| `compileSdk`                  | **37**    | 用哪一版 Android SDK 编译。**不能降**，原因见下节 |
+| `targetSdk`                   | **36**    | 声明适配到的最高版本，影响系统行为策略            |
+| `minSdk`                      | **26**    | 最低可安装版本，即 Android 8.0                    |
+| `versionCode` / `versionName` | 1 / "1.0" | 发版时在这里改                                    |
+| Java 兼容级别                 | **17**    | `sourceCompatibility` / `targetCompatibility`     |
 
 > ⚠️ 虽然 `minSdk = 26`（8.0），但 **LSPosed 官方只支持 Android 8.1（API 27）及以上**，所以实际可用范围是从 8.1 起。
 
 ### 依赖库（`gradle/libs.versions.toml`）
 
-| 库 | 版本 | 作用 |
-|---|---|---|
-| Compose BOM | `2026.08.00`（Compose 1.12） | 统一管理 Compose 各子库版本 |
-| `androidx.core:core-ktx` | 1.19.1 | Android KTX 扩展 |
-| `androidx.lifecycle:lifecycle-runtime-ktx` | 2.11.0 | 生命周期 |
-| `androidx.activity:activity-compose` | 1.13.0 | Compose 与 Activity 桥接 |
-| `top.yukonga.miuix.kmp:miuix-ui-android` | **0.9.4** | MIUIX 基础组件 |
-| `top.yukonga.miuix.kmp:miuix-preference-android` | **0.9.4** | MIUIX 设置项组件 |
-| `top.yukonga.miuix.kmp:miuix-icons-android` | **0.9.4** | MIUIX 图标 |
-| `io.github.libxposed:api` | **102.0.0** | Xposed API，`compileOnly`（框架运行时提供） |
-| `io.github.libxposed:service` | **102.0.0** | 模块 UI 侧向 hook 进程写 remote prefs |
+| 库                                               | 版本                         | 作用                                        |
+| ------------------------------------------------ | ---------------------------- | ------------------------------------------- |
+| Compose BOM                                      | `2026.08.00`（Compose 1.12） | 统一管理 Compose 各子库版本                 |
+| `androidx.core:core-ktx`                         | 1.19.1                       | Android KTX 扩展                            |
+| `androidx.lifecycle:lifecycle-runtime-ktx`       | 2.11.0                       | 生命周期                                    |
+| `androidx.activity:activity-compose`             | 1.13.0                       | Compose 与 Activity 桥接                    |
+| `top.yukonga.miuix.kmp:miuix-ui-android`         | **0.9.4**                    | MIUIX 基础组件                              |
+| `top.yukonga.miuix.kmp:miuix-preference-android` | **0.9.4**                    | MIUIX 设置项组件                            |
+| `top.yukonga.miuix.kmp:miuix-icons-android`      | **0.9.4**                    | MIUIX 图标                                  |
+| `io.github.libxposed:api`                        | **102.0.0**                  | Xposed API，`compileOnly`（框架运行时提供） |
+| `io.github.libxposed:service`                    | **102.0.0**                  | 模块 UI 侧向 hook 进程写 remote prefs       |
 
 ---
 
@@ -210,15 +210,15 @@ MIUIX 从 0.9.0 到 0.9.4 **全部**要求 `minCompileSdk=37`，所以「降 MIU
 
 ### 4.1 最常用的几条
 
-| 目的 | 命令 |
-|---|---|
-| 打 Debug 包（开发自测用） | `gradlew.bat :app:assembleDebug` |
-| 打 Release 包（发布用） | `gradlew.bat :app:assembleRelease` |
-| 打 Debug 包并直接装到手机 | `gradlew.bat :app:installDebug` |
-| 打 Release 包并直接装到手机 | `gradlew.bat :app:installRelease` |
-| 打 AAB（上架 Google Play 用） | `gradlew.bat :app:bundleRelease` |
-| 清理构建产物 | `gradlew.bat clean` |
-| 停掉后台 Gradle 守护进程 | `gradlew.bat --stop` |
+| 目的                          | 命令                               |
+| ----------------------------- | ---------------------------------- |
+| 打 Debug 包（开发自测用）     | `gradlew.bat :app:assembleDebug`   |
+| 打 Release 包（发布用）       | `gradlew.bat :app:assembleRelease` |
+| 打 Debug 包并直接装到手机     | `gradlew.bat :app:installDebug`    |
+| 打 Release 包并直接装到手机   | `gradlew.bat :app:installRelease`  |
+| 打 AAB（上架 Google Play 用） | `gradlew.bat :app:bundleRelease`   |
+| 清理构建产物                  | `gradlew.bat clean`                |
+| 停掉后台 Gradle 守护进程      | `gradlew.bat --stop`               |
 
 装到手机前请确认 `adb devices` 能看到你的设备，且已开启 USB 调试。
 
@@ -233,25 +233,25 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 
 ### 4.3 测试与检查
 
-| 目的 | 命令 |
-|---|---|
-| 跑本地单元测试 | `gradlew.bat :app:test` |
-| 跑真机仪器化测试 | `gradlew.bat :app:connectedAndroidTest` |
-| 代码静态检查（Lint） | `gradlew.bat :app:lintDebug` |
-| 查看依赖树 | `gradlew.bat :app:dependencies --configuration releaseRuntimeClasspath` |
-| 查看所有可用任务 | `gradlew.bat tasks` |
-| 只编译不打包（快速查语法错） | `gradlew.bat :app:compileDebugKotlin` |
+| 目的                         | 命令                                                                    |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| 跑本地单元测试               | `gradlew.bat :app:test`                                                 |
+| 跑真机仪器化测试             | `gradlew.bat :app:connectedAndroidTest`                                 |
+| 代码静态检查（Lint）         | `gradlew.bat :app:lintDebug`                                            |
+| 查看依赖树                   | `gradlew.bat :app:dependencies --configuration releaseRuntimeClasspath` |
+| 查看所有可用任务             | `gradlew.bat tasks`                                                     |
+| 只编译不打包（快速查语法错） | `gradlew.bat :app:compileDebugKotlin`                                   |
 
 ### 4.4 常用附加参数
 
-| 参数 | 作用 |
-|---|---|
-| `--console=plain` | 输出不带进度动画，方便重定向到日志文件 |
-| `--info` / `--debug` | 输出更详细日志，排查依赖问题时用 |
-| `--stacktrace` | 报错时打印堆栈 |
-| `--offline` | 离线构建，只用本地缓存（依赖已下载完时可加速） |
-| `--refresh-dependencies` | 强制重新解析依赖（怀疑缓存损坏时用） |
-| `--no-daemon` | 不用守护进程，内存紧张时用 |
+| 参数                     | 作用                                           |
+| ------------------------ | ---------------------------------------------- |
+| `--console=plain`        | 输出不带进度动画，方便重定向到日志文件         |
+| `--info` / `--debug`     | 输出更详细日志，排查依赖问题时用               |
+| `--stacktrace`           | 报错时打印堆栈                                 |
+| `--offline`              | 离线构建，只用本地缓存（依赖已下载完时可加速） |
+| `--refresh-dependencies` | 强制重新解析依赖（怀疑缓存损坏时用）           |
+| `--no-daemon`            | 不用守护进程，内存紧张时用                     |
 
 例子：
 
@@ -270,12 +270,12 @@ gradlew.bat :app:assembleDebug --console=plain --stacktrace
 
 ### 4.6 产物位置
 
-| 构建类型 | 输出路径 |
-|---|---|
-| Debug APK | `app/build/outputs/apk/debug/app-debug.apk` |
-| Release APK（已签名） | `app/build/outputs/apk/release/app-release.apk` |
+| 构建类型              | 输出路径                                                 |
+| --------------------- | -------------------------------------------------------- |
+| Debug APK             | `app/build/outputs/apk/debug/app-debug.apk`              |
+| Release APK（已签名） | `app/build/outputs/apk/release/app-release.apk`          |
 | Release APK（未签名） | `app/build/outputs/apk/release/app-release-unsigned.apk` |
-| Release AAB | `app/build/outputs/bundle/release/app-release.aab` |
+| Release AAB           | `app/build/outputs/bundle/release/app-release.aab`       |
 
 ---
 
@@ -361,14 +361,14 @@ code/
 
 ## 七、常见报错与处理
 
-| 报错关键信息 | 原因 | 处理 |
-|---|---|---|
-| `Remote host terminated the handshake` / `Could not download ...` | 代理或网络抖动，依赖没下下来 | 先直接重试一次；反复失败就在 `~/.gradle/gradle.properties` 配好代理，或加 `--refresh-dependencies` |
-| `Requires compileSdk 37` / `minCompileSdk=37` | SDK Platform 37 没装 | SDK Manager 装 API 37 |
-| `Gradle JVM ... incompatible` / JDK 版本相关 | 用了非 JDK 17 | 切回 JDK 17 |
-| `useAndroidX` 相关报错 | `gradle.properties` 里缺 `android.useAndroidX=true` | 该文件已配置好，别删 |
-| 首次构建卡在 `Downloading gradle-9.5.0-bin.zip` | 网络问题导致发行包下不动 | 用浏览器 / 下载工具取回 zip，或换个网络环境重试 |
-| 改了版本号但构建没变化 | 配置缓存命中 | 加 `--rerun-tasks`，或删掉 `.gradle` 与 `app/build` 后重建 |
+| 报错关键信息                                                      | 原因                                                | 处理                                                                                               |
+| ----------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `Remote host terminated the handshake` / `Could not download ...` | 代理或网络抖动，依赖没下下来                        | 先直接重试一次；反复失败就在 `~/.gradle/gradle.properties` 配好代理，或加 `--refresh-dependencies` |
+| `Requires compileSdk 37` / `minCompileSdk=37`                     | SDK Platform 37 没装                                | SDK Manager 装 API 37                                                                              |
+| `Gradle JVM ... incompatible` / JDK 版本相关                      | 用了非 JDK 17                                       | 切回 JDK 17                                                                                        |
+| `useAndroidX` 相关报错                                            | `gradle.properties` 里缺 `android.useAndroidX=true` | 该文件已配置好，别删                                                                               |
+| 首次构建卡在 `Downloading gradle-9.5.0-bin.zip`                   | 网络问题导致发行包下不动                            | 用浏览器 / 下载工具取回 zip，或换个网络环境重试                                                    |
+| 改了版本号但构建没变化                                            | 配置缓存命中                                        | 加 `--rerun-tasks`，或删掉 `.gradle` 与 `app/build` 后重建                                         |
 
 ---
 
@@ -414,3 +414,4 @@ app/src/main/
 - [ ] 真机验证：HyperOS 3 / ColorOS 16 / Flyme 9
 - [ ] 自检页增强（显示各 ROM 上 goToSleep 是否真的可用）
 - [ ] 可选：息屏同时暂停播放（hook MediaSession / AudioManager）
+
